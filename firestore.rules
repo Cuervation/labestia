@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid == uid;
+    }
+
+    match /scores/{scoreId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.score is number
+        && request.resource.data.maxCombo is number
+        && request.resource.data.durationSeconds == 90;
+    }
+
+    match /leaderboard/{uid} {
+      allow read: if true;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.bestScore is number
+        && request.resource.data.maxCombo is number;
+    }
+  }
+}
