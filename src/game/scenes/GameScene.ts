@@ -179,6 +179,7 @@ export class GameScene extends Phaser.Scene {
             y: Math.round(player.y),
           }
         : null,
+      playerFacing: this.player?.getFacing?.() ?? "center",
       score: this.scoring?.score ?? 0,
       combo: this.scoring?.comboCount ?? 0,
       bestiaMode: this.scoring?.bestiaModeActive ?? false,

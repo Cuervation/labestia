@@ -18,6 +18,7 @@
   },
   player: {
     baseSpeed: 280,
+    spriteScale: 0.42,
     width: 76,
     height: 132,
   },

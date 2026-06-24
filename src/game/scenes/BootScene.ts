@@ -8,7 +8,12 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     for (const asset of ASSET_MANIFEST) {
-      this.load.svg(asset.key, asset.path);
+      if (asset.path.endsWith(".svg")) {
+        this.load.svg(asset.key, asset.path);
+        continue;
+      }
+
+      this.load.image(asset.key, asset.path);
     }
   }
 

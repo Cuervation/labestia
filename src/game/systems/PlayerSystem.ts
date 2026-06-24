@@ -6,53 +6,68 @@ export class PlayerSystem {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
   private readonly cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private readonly wasd?: Record<string, Phaser.Input.Keyboard.Key>;
+  private readonly pressedKeys = new Set<string>();
   private slowUntil = 0;
+  private currentTextureKey = ASSET_KEYS.playerCenter;
+  private readonly handleKeyDown = (event: KeyboardEvent) => {
+    this.pressedKeys.add(event.code);
+  };
+  private readonly handleKeyUp = (event: KeyboardEvent) => {
+    this.pressedKeys.delete(event.code);
+  };
 
   constructor(private readonly scene: Phaser.Scene) {
-    this.ensurePlayerTexture();
+    this.ensurePlayerTextures();
 
     this.sprite = scene.physics.add.sprite(
       scene.scale.width / 2,
       scene.scale.height - 130,
-      ASSET_KEYS.playerTruck,
+      ASSET_KEYS.playerCenter,
     );
-    this.sprite.setDisplaySize(GAME_BALANCE.player.width, GAME_BALANCE.player.height);
+    this.sprite.setScale(GAME_BALANCE.player.spriteScale);
     this.sprite.setCollideWorldBounds(true);
     this.sprite.setDepth(10);
 
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
-    body.setSize(GAME_BALANCE.player.width * 0.72, GAME_BALANCE.player.height * 0.78);
-    body.setOffset(16, 28);
+    body.setSize(GAME_BALANCE.player.width, GAME_BALANCE.player.height);
+    body.setOffset(
+      (this.sprite.width - GAME_BALANCE.player.width) / 2,
+      (this.sprite.height - GAME_BALANCE.player.height) / 2,
+    );
 
     this.cursors = scene.input.keyboard?.createCursorKeys();
     this.wasd = scene.input.keyboard?.addKeys("W,A,S,D") as Record<string, Phaser.Input.Keyboard.Key> | undefined;
+
+    window.addEventListener("keydown", this.handleKeyDown);
+    window.addEventListener("keyup", this.handleKeyUp);
+    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupInputListeners());
+    this.scene.events.once(Phaser.Scenes.Events.DESTROY, () => this.cleanupInputListeners());
   }
 
   update(time: number, speedMultiplier: number) {
-    const velocity = new Phaser.Math.Vector2(0, 0);
+    let direction = 0;
 
-    if (this.cursors?.left.isDown || this.wasd?.A.isDown) {
-      velocity.x -= 1;
+    if (this.isPressed("ArrowLeft", this.cursors?.left.isDown, this.wasd?.A.isDown)) {
+      direction -= 1;
     }
-    if (this.cursors?.right.isDown || this.wasd?.D.isDown) {
-      velocity.x += 1;
-    }
-    if (this.cursors?.up.isDown || this.wasd?.W.isDown) {
-      velocity.y -= 1;
-    }
-    if (this.cursors?.down.isDown || this.wasd?.S.isDown) {
-      velocity.y += 1;
+    if (this.isPressed("ArrowRight", this.cursors?.right.isDown, this.wasd?.D.isDown)) {
+      direction += 1;
     }
 
     const policeSlow = time < this.slowUntil ? GAME_BALANCE.policeSlowMultiplier : 1;
     const speed = GAME_BALANCE.player.baseSpeed * speedMultiplier * policeSlow;
+    const velocityX = direction * speed;
 
-    if (velocity.lengthSq() > 0) {
-      velocity.normalize().scale(speed);
+    this.sprite.setVelocityX(velocityX);
+    this.sprite.setVelocityY(0);
+
+    if (direction < 0) {
+      this.setTexture(ASSET_KEYS.playerLeft);
+    } else if (direction > 0) {
+      this.setTexture(ASSET_KEYS.playerRight);
+    } else {
+      this.setTexture(ASSET_KEYS.playerCenter);
     }
-
-    this.sprite.setVelocity(velocity.x, velocity.y);
-    this.sprite.setRotation(Phaser.Math.Clamp(velocity.x / speed, -1, 1) * 0.18 || 0);
   }
 
   applyPoliceSlow(time: number) {
@@ -63,8 +78,24 @@ export class PlayerSystem {
     return time < this.slowUntil;
   }
 
-  private ensurePlayerTexture() {
-    if (this.scene.textures.exists(ASSET_KEYS.playerTruck)) {
+  getFacing() {
+    if (this.currentTextureKey === ASSET_KEYS.playerLeft) {
+      return "left";
+    }
+
+    if (this.currentTextureKey === ASSET_KEYS.playerRight) {
+      return "right";
+    }
+
+    return "center";
+  }
+
+  private ensurePlayerTextures() {
+    const missingKeys = [ASSET_KEYS.playerCenter, ASSET_KEYS.playerLeft, ASSET_KEYS.playerRight].filter(
+      (key) => !this.scene.textures.exists(key),
+    );
+
+    if (missingKeys.length === 0) {
       return;
     }
 
@@ -73,7 +104,33 @@ export class PlayerSystem {
     graphics.fillRoundedRect(0, 0, 80, 140, 14);
     graphics.lineStyle(4, 0x2a0a0a, 1);
     graphics.strokeRoundedRect(0, 0, 80, 140, 14);
-    graphics.generateTexture(ASSET_KEYS.playerTruck, 80, 140);
+
+    for (const key of missingKeys) {
+      graphics.generateTexture(key, 80, 140);
+    }
+
     graphics.destroy();
+  }
+
+  private setTexture(textureKey: string) {
+    if (this.currentTextureKey === textureKey) {
+      return;
+    }
+
+    this.currentTextureKey = textureKey;
+    this.sprite.setTexture(textureKey);
+  }
+
+  private isPressed(code: string, ...fallbacks: Array<boolean | undefined>) {
+    if (this.pressedKeys.has(code)) {
+      return true;
+    }
+
+    return fallbacks.some(Boolean);
+  }
+
+  private cleanupInputListeners() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    window.removeEventListener("keyup", this.handleKeyUp);
   }
 }

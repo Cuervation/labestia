@@ -142,6 +142,16 @@ button:disabled {
   z-index: 1;
 }
 
+.app-shell:has(.cover-screen) .topbar {
+  display: none;
+}
+
+.page-shell:has(.cover-screen) {
+  max-width: none;
+  padding: 0;
+  z-index: 30;
+}
+
 .page-stack {
   display: grid;
   gap: 1.25rem;
@@ -163,6 +173,52 @@ button:disabled {
   letter-spacing: 0.18em;
   margin-bottom: 0.5rem;
   text-transform: uppercase;
+}
+
+.cover-screen {
+  background: #050505;
+  inset: 0;
+  overflow: hidden;
+  position: fixed;
+  z-index: 20;
+}
+
+.cover-image {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  object-position: center top;
+  width: 100%;
+}
+
+.cover-play-button {
+  background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%);
+  border: 2px solid rgba(255, 247, 237, 0.78);
+  border-radius: 0.35rem;
+  bottom: clamp(2rem, 8vh, 5rem);
+  box-shadow:
+    0 0 0 4px rgba(20, 20, 20, 0.7),
+    0 0 22px rgba(248, 113, 113, 0.65),
+    0 14px 34px rgba(0, 0, 0, 0.65);
+  color: #fff7ed;
+  display: inline-flex;
+  font-size: clamp(2.5rem, 10vw, 5rem);
+  font-style: italic;
+  font-weight: 950;
+  justify-content: center;
+  left: 50%;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  min-width: min(72vw, 22rem);
+  padding: 0.55rem 1.4rem 0.65rem;
+  position: absolute;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.55);
+  transform: translateX(-50%);
+  z-index: 21;
+}
+
+.cover-play-button:hover {
+  transform: translateX(-50%) translateY(-2px);
 }
 
 .hero-screen {
