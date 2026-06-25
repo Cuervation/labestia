@@ -8,12 +8,18 @@ export class PlayerSystem {
   private readonly wasd?: Record<string, Phaser.Input.Keyboard.Key>;
   private readonly pressedKeys = new Set<string>();
   private slowUntil = 0;
-  private currentTextureKey = ASSET_KEYS.playerCenter;
+  private touchDirection = 0;
+  private currentTextureKey: string = ASSET_KEYS.playerCenter;
   private readonly handleKeyDown = (event: KeyboardEvent) => {
     this.pressedKeys.add(event.code);
   };
   private readonly handleKeyUp = (event: KeyboardEvent) => {
     this.pressedKeys.delete(event.code);
+  };
+  private readonly handleTouchControl = (event: Event) => {
+    const customEvent = event as CustomEvent<{ direction?: number }>;
+    const direction = Number(customEvent.detail?.direction ?? 0);
+    this.touchDirection = Phaser.Math.Clamp(direction, -1, 1);
   };
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -40,12 +46,13 @@ export class PlayerSystem {
 
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("keyup", this.handleKeyUp);
+    window.addEventListener("laBestia:playerControl", this.handleTouchControl);
     this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupInputListeners());
     this.scene.events.once(Phaser.Scenes.Events.DESTROY, () => this.cleanupInputListeners());
   }
 
   update(time: number, speedMultiplier: number) {
-    let direction = 0;
+    let direction = this.touchDirection;
 
     if (this.isPressed("ArrowLeft", this.cursors?.left.isDown, this.wasd?.A.isDown)) {
       direction -= 1;
@@ -53,6 +60,8 @@ export class PlayerSystem {
     if (this.isPressed("ArrowRight", this.cursors?.right.isDown, this.wasd?.D.isDown)) {
       direction += 1;
     }
+
+    direction = Phaser.Math.Clamp(direction, -1, 1);
 
     const policeSlow = time < this.slowUntil ? GAME_BALANCE.policeSlowMultiplier : 1;
     const speed = GAME_BALANCE.player.baseSpeed * speedMultiplier * policeSlow;
@@ -72,6 +81,11 @@ export class PlayerSystem {
 
   applyPoliceSlow(time: number) {
     this.slowUntil = time + GAME_BALANCE.policeSlowDurationMs;
+  }
+
+  idle() {
+    this.sprite.setVelocity(0, 0);
+    this.setTexture(ASSET_KEYS.playerCenter);
   }
 
   isSlowed(time: number) {
@@ -132,5 +146,6 @@ export class PlayerSystem {
   private cleanupInputListeners() {
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("keyup", this.handleKeyUp);
+    window.removeEventListener("laBestia:playerControl", this.handleTouchControl);
   }
 }

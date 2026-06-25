@@ -27,6 +27,7 @@ const FALLBACK_COLORS: Record<VehicleKind, number> = {
 export class TrafficSystem {
   readonly group: Phaser.Physics.Arcade.Group;
   private nextSpawnAt = 0;
+  private started = false;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.group = scene.physics.add.group();
@@ -35,6 +36,12 @@ export class TrafficSystem {
 
   update(time: number, difficulty: DifficultyLevel) {
     const config = GAME_BALANCE.traffic[difficulty] satisfies SpawnConfig;
+
+    if (!this.started) {
+      this.started = true;
+      this.nextSpawnAt = time + GAME_BALANCE.traffic.firstSpawnDelayMs;
+      return;
+    }
 
     if (time >= this.nextSpawnAt) {
       this.spawnVehicle(config);
@@ -55,6 +62,10 @@ export class TrafficSystem {
     sprite.destroy();
   }
 
+  clearVehicles() {
+    this.group.clear(true, true);
+  }
+
   getVehicleKind(sprite: Phaser.Physics.Arcade.Sprite): VehicleKind {
     return sprite.getData("vehicleKind") as VehicleKind;
   }
@@ -64,22 +75,26 @@ export class TrafficSystem {
     const x = Phaser.Utils.Array.GetRandom([...GAME_BALANCE.traffic.lanes]);
     const y = -90;
     const texture = VEHICLE_TEXTURES[kind];
-    const sprite = this.scene.physics.add.sprite(x, y, texture);
+    const sprite = this.group.create(x, y, texture) as Phaser.Physics.Arcade.Sprite;
     const speed = Phaser.Math.Between(config.minSpeed, config.maxSpeed);
 
     sprite.setData("vehicleKind", kind);
     sprite.setDisplaySize(
-      kind === "van" ? GAME_BALANCE.player.width : GAME_BALANCE.traffic.carWidth,
-      kind === "van" ? GAME_BALANCE.player.height : GAME_BALANCE.traffic.carHeight,
+      kind === "van" ? GAME_BALANCE.traffic.vanWidth : GAME_BALANCE.traffic.carWidth,
+      kind === "van" ? GAME_BALANCE.traffic.vanHeight : GAME_BALANCE.traffic.carHeight,
     );
     sprite.setVelocityY(speed);
     sprite.setDepth(kind === "policeCar" ? 8 : 6);
 
     const body = sprite.body as Phaser.Physics.Arcade.Body;
-    body.setSize(sprite.displayWidth * 0.74, sprite.displayHeight * 0.78);
-    body.setOffset(sprite.displayWidth * 0.13, sprite.displayHeight * 0.12);
-
-    this.group.add(sprite);
+    body.setSize(
+      sprite.displayWidth * GAME_BALANCE.traffic.colliderWidthRatio,
+      sprite.displayHeight * GAME_BALANCE.traffic.colliderHeightRatio,
+    );
+    body.setOffset(
+      sprite.displayWidth * GAME_BALANCE.traffic.colliderOffsetXRatio,
+      sprite.displayHeight * GAME_BALANCE.traffic.colliderOffsetYRatio,
+    );
   }
 
   private pickVehicleKind(policeChance: number): VehicleKind {
@@ -100,10 +115,22 @@ export class TrafficSystem {
       const width = kind === "van" ? 80 : 68;
       const height = kind === "van" ? 138 : 124;
       const graphics = this.scene.add.graphics();
+      graphics.fillStyle(0x020617, 0.32);
+      graphics.fillEllipse(width / 2, height / 2 + 6, width * 0.86, height * 0.9);
       graphics.fillStyle(FALLBACK_COLORS[kind], 1);
-      graphics.fillRoundedRect(0, 0, width, height, 12);
+      graphics.fillRoundedRect(6, 6, width - 12, height - 12, 12);
       graphics.lineStyle(4, 0x111827, 1);
-      graphics.strokeRoundedRect(0, 0, width, height, 12);
+      graphics.strokeRoundedRect(6, 6, width - 12, height - 12, 12);
+      graphics.fillStyle(kind === "taxi" ? 0x111827 : 0xdbeafe, kind === "taxi" ? 0.85 : 0.9);
+      graphics.fillRoundedRect(width * 0.28, height * 0.16, width * 0.44, height * 0.18, 6);
+      graphics.fillStyle(kind === "policeCar" ? 0x2563eb : 0x111827, 0.28);
+      graphics.fillRoundedRect(width * 0.24, height * 0.46, width * 0.52, height * 0.18, 6);
+      graphics.fillStyle(0xfef3c7, 1);
+      graphics.fillRoundedRect(width * 0.32, 10, width * 0.14, 6, 2);
+      graphics.fillRoundedRect(width * 0.54, 10, width * 0.14, 6, 2);
+      graphics.fillStyle(0xef4444, 1);
+      graphics.fillRoundedRect(width * 0.32, height - 16, width * 0.14, 6, 2);
+      graphics.fillRoundedRect(width * 0.54, height - 16, width * 0.14, 6, 2);
       graphics.generateTexture(key, width, height);
       graphics.destroy();
     });

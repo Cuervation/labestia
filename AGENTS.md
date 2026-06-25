@@ -146,7 +146,7 @@ Firebase maneja:
 
 * login
 * usuarios
-* gameRuns
+* scores
 * leaderboard
 * hosting
 

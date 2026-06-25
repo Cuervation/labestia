@@ -40,11 +40,12 @@ export class ScoringSystem {
     }
   }
 
-  registerHit(kind: VehicleKind, timeMs: number): HitResult {
-    const insideComboWindow = timeMs - this.lastHitAt <= GAME_BALANCE.comboWindowMs;
+  registerHit(kind: VehicleKind): HitResult {
+    const hitAtMs = this.elapsedMs;
+    const insideComboWindow = hitAtMs - this.lastHitAt <= GAME_BALANCE.comboWindowMs;
     this.comboCount = insideComboWindow ? this.comboCount + 1 : 1;
     this.maxCombo = Math.max(this.maxCombo, this.comboCount);
-    this.lastHitAt = timeMs;
+    this.lastHitAt = hitAtMs;
     this.autosDestroyed += 1;
 
     let bestiaActivated = false;
@@ -68,11 +69,15 @@ export class ScoringSystem {
     };
   }
 
+  addBonus(points: number) {
+    this.score += points;
+  }
+
   getDifficulty(): DifficultyLevel {
-    if (this.remainingSeconds > 60) {
+    if (this.elapsedSeconds < GAME_BALANCE.difficulty.mediumAfterSeconds) {
       return "easy";
     }
-    if (this.remainingSeconds > 30) {
+    if (this.elapsedSeconds < GAME_BALANCE.difficulty.chaosAfterSeconds) {
       return "medium";
     }
     return "chaos";

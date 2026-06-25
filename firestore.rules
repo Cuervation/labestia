@@ -10,27 +10,85 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function isStringOrNull(value) {
+      return value is string || value == null;
+    }
+
+    function validUser(uid) {
+      return request.resource.data.keys().hasOnly([
+          'uid',
+          'displayName',
+          'photoURL',
+          'createdAt',
+          'lastLoginAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.displayName is string
+        && isStringOrNull(request.resource.data.photoURL)
+        && request.resource.data.lastLoginAt == request.time;
+    }
+
+    function validScore() {
+      return request.resource.data.keys().hasOnly([
+          'uid',
+          'displayName',
+          'score',
+          'maxCombo',
+          'durationSeconds',
+          'createdAt'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.displayName is string
+        && request.resource.data.score is number
+        && request.resource.data.score >= 0
+        && request.resource.data.maxCombo is number
+        && request.resource.data.maxCombo >= 1
+        && request.resource.data.durationSeconds is number
+        && request.resource.data.durationSeconds >= 1
+        && request.resource.data.durationSeconds <= 600
+        && request.resource.data.createdAt == request.time;
+    }
+
+    function validLeaderboard(uid) {
+      return request.resource.data.keys().hasOnly([
+          'uid',
+          'displayName',
+          'bestScore',
+          'maxCombo',
+          'updatedAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.displayName is string
+        && request.resource.data.bestScore is number
+        && request.resource.data.bestScore >= 0
+        && request.resource.data.maxCombo is number
+        && request.resource.data.maxCombo >= 1
+        && request.resource.data.updatedAt == request.time;
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid)
-        && request.resource.data.uid == uid;
+      allow create: if isOwner(uid)
+        && validUser(uid)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid)
+        && validUser(uid)
+        && request.resource.data.createdAt == resource.data.createdAt;
     }
 
     match /scores/{scoreId} {
-      allow read: if true;
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
       allow create: if isSignedIn()
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.score is number
-        && request.resource.data.maxCombo is number
-        && request.resource.data.durationSeconds == 90;
+        && validScore();
     }
 
     match /leaderboard/{uid} {
       allow read: if true;
-      allow create, update: if isOwner(uid)
-        && request.resource.data.uid == uid
-        && request.resource.data.bestScore is number
-        && request.resource.data.maxCombo is number;
+      allow create: if isOwner(uid)
+        && validLeaderboard(uid);
+      allow update: if isOwner(uid)
+        && validLeaderboard(uid)
+        && request.resource.data.bestScore >= resource.data.bestScore;
     }
   }
 }

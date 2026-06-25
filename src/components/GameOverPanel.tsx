@@ -1,11 +1,22 @@
-﻿type GameOverPanelProps = {
+type GameOverPanelProps = {
   score: number;
   maxCombo: number;
   message: string;
-  autosDestroyed?: number | null;
+  carsDestroyed?: number | null;
+  missionsCompleted?: number;
+  missionsTotal?: number;
+  onRestart?: () => void;
 };
 
-export function GameOverPanel({ score, maxCombo, message, autosDestroyed = null }: GameOverPanelProps) {
+export function GameOverPanel({
+  score,
+  maxCombo,
+  message,
+  carsDestroyed = null,
+  missionsCompleted = 0,
+  missionsTotal = 0,
+  onRestart,
+}: GameOverPanelProps) {
   return (
     <div className="panel game-over-panel">
       <div className="panel-header">
@@ -23,12 +34,18 @@ export function GameOverPanel({ score, maxCombo, message, autosDestroyed = null 
         </div>
         <div className="stat-card">
           <span>Autos destruidos</span>
-          <strong>{autosDestroyed ?? "—"}</strong>
+          <strong>{carsDestroyed ?? "-"}</strong>
+        </div>
+        <div className="stat-card">
+          <span>Objetivos</span>
+          <strong>
+            {missionsCompleted}/{missionsTotal}
+          </strong>
         </div>
       </div>
       <p className="status-line">{message}</p>
       <div className="hero-actions">
-        <a className="primary-link" href="/play">Jugar de nuevo</a>
+        <button className="primary-link" type="button" onClick={onRestart}>Jugar de nuevo</button>
         <a className="secondary-link" href="/ranking">Ver ranking</a>
       </div>
     </div>

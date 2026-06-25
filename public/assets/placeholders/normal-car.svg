@@ -1,8 +1,27 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 220">
-  <rect x="16" y="12" width="80" height="196" rx="18" fill="#94a3b8" stroke="#1f2937" stroke-width="8"/>
-  <rect x="28" y="34" width="56" height="42" rx="10" fill="#dbeafe"/>
-  <circle cx="30" cy="42" r="11" fill="#111827"/>
-  <circle cx="82" cy="42" r="11" fill="#111827"/>
-  <circle cx="30" cy="180" r="11" fill="#111827"/>
-  <circle cx="82" cy="180" r="11" fill="#111827"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 220" role="img" aria-label="Auto comun top-down">
+  <defs>
+    <linearGradient id="body" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#8aa0b8"/>
+      <stop offset="0.55" stop-color="#475569"/>
+      <stop offset="1" stop-color="#1f2937"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#dbeafe"/>
+      <stop offset="1" stop-color="#1e3a8a"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="56" cy="114" rx="46" ry="101" fill="#020617" opacity="0.36"/>
+  <rect x="18" y="12" width="76" height="196" rx="20" fill="url(#body)" stroke="#111827" stroke-width="6"/>
+  <path d="M32 28h48l8 34H24z" fill="#334155" opacity="0.8"/>
+  <rect x="29" y="38" width="54" height="38" rx="9" fill="url(#glass)" stroke="#0f172a" stroke-width="4"/>
+  <rect x="30" y="130" width="52" height="42" rx="12" fill="#0f172a" opacity="0.28"/>
+  <path d="M24 90h64M26 184h60" stroke="#cbd5e1" stroke-width="4" opacity="0.45"/>
+  <rect x="14" y="42" width="12" height="34" rx="5" fill="#0f172a"/>
+  <rect x="86" y="42" width="12" height="34" rx="5" fill="#0f172a"/>
+  <rect x="14" y="156" width="12" height="34" rx="5" fill="#0f172a"/>
+  <rect x="86" y="156" width="12" height="34" rx="5" fill="#0f172a"/>
+  <rect x="31" y="18" width="18" height="8" rx="3" fill="#fde68a"/>
+  <rect x="63" y="18" width="18" height="8" rx="3" fill="#fde68a"/>
+  <rect x="30" y="198" width="20" height="7" rx="3" fill="#ef4444"/>
+  <rect x="62" y="198" width="20" height="7" rx="3" fill="#ef4444"/>
 </svg>

@@ -9,7 +9,7 @@ export type GameRunResult = {
   displayName: string;
   score: number;
   maxCombo: number;
-  durationSeconds: 90;
+  durationSeconds: number;
 };
 
 export type LeaderboardEntry = {

@@ -1,4 +1,6 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
-  <polygon points="90,8 112,54 162,40 126,82 172,90 126,98 162,140 112,126 90,172 68,126 18,140 54,98 8,90 54,82 18,40 68,54" fill="#f59e0b" stroke="#7c2d12" stroke-width="8"/>
-  <circle cx="90" cy="90" r="20" fill="#fde68a"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="Explosion arcade">
+  <polygon points="90,6 108,48 154,22 132,70 176,82 130,98 158,144 110,126 90,174 70,126 22,144 50,98 4,82 48,70 26,22 72,48" fill="#ef4444" stroke="#7c2d12" stroke-width="7"/>
+  <polygon points="90,24 104,64 140,52 120,84 150,92 118,102 134,136 102,120 90,156 78,120 46,136 62,102 30,92 60,84 40,52 76,64" fill="#f97316"/>
+  <circle cx="90" cy="92" r="28" fill="#fde68a"/>
+  <circle cx="90" cy="92" r="12" fill="#fff7ed"/>
 </svg>
