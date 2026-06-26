@@ -14,6 +14,10 @@ service cloud.firestore {
       return value is string || value == null;
     }
 
+    function isNumberOrNull(value) {
+      return value is number || value == null;
+    }
+
     function validUser(uid) {
       return request.resource.data.keys().hasOnly([
           'uid',
@@ -34,6 +38,7 @@ service cloud.firestore {
           'displayName',
           'score',
           'maxCombo',
+          'carsDestroyed',
           'durationSeconds',
           'createdAt'
         ])
@@ -43,6 +48,8 @@ service cloud.firestore {
         && request.resource.data.score >= 0
         && request.resource.data.maxCombo is number
         && request.resource.data.maxCombo >= 1
+        && isNumberOrNull(request.resource.data.carsDestroyed)
+        && (request.resource.data.carsDestroyed == null || request.resource.data.carsDestroyed >= 0)
         && request.resource.data.durationSeconds is number
         && request.resource.data.durationSeconds >= 1
         && request.resource.data.durationSeconds <= 600
@@ -55,6 +62,7 @@ service cloud.firestore {
           'displayName',
           'bestScore',
           'maxCombo',
+          'carsDestroyed',
           'updatedAt'
         ])
         && request.resource.data.uid == uid
@@ -63,6 +71,8 @@ service cloud.firestore {
         && request.resource.data.bestScore >= 0
         && request.resource.data.maxCombo is number
         && request.resource.data.maxCombo >= 1
+        && isNumberOrNull(request.resource.data.carsDestroyed)
+        && (request.resource.data.carsDestroyed == null || request.resource.data.carsDestroyed >= 0)
         && request.resource.data.updatedAt == request.time;
     }
 

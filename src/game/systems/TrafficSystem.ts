@@ -17,6 +17,8 @@ const VEHICLE_TEXTURES: Record<VehicleKind, string> = {
   policeCar: ASSET_KEYS.policeCar,
 };
 
+const COMMON_CAR_TEXTURES = [ASSET_KEYS.chery, ASSET_KEYS.eco, ASSET_KEYS.focus, ASSET_KEYS.meriva, ASSET_KEYS.renault];
+
 const FALLBACK_COLORS: Record<VehicleKind, number> = {
   normalCar: 0x94a3b8,
   taxi: 0xfacc15,
@@ -74,15 +76,13 @@ export class TrafficSystem {
     const kind = this.pickVehicleKind(config.policeChance);
     const x = Phaser.Utils.Array.GetRandom([...GAME_BALANCE.traffic.lanes]);
     const y = -90;
-    const texture = VEHICLE_TEXTURES[kind];
+    const texture = kind === "policeCar" ? ASSET_KEYS.policeCar : Phaser.Utils.Array.GetRandom(COMMON_CAR_TEXTURES);
     const sprite = this.group.create(x, y, texture) as Phaser.Physics.Arcade.Sprite;
     const speed = Phaser.Math.Between(config.minSpeed, config.maxSpeed);
 
     sprite.setData("vehicleKind", kind);
-    sprite.setDisplaySize(
-      kind === "van" ? GAME_BALANCE.traffic.vanWidth : GAME_BALANCE.traffic.carWidth,
-      kind === "van" ? GAME_BALANCE.traffic.vanHeight : GAME_BALANCE.traffic.carHeight,
-    );
+    sprite.setData("vehicleTexture", texture);
+    this.scaleVehicle(sprite, kind);
     sprite.setVelocityY(speed);
     sprite.setDepth(kind === "policeCar" ? 8 : 6);
 
@@ -102,37 +102,56 @@ export class TrafficSystem {
       return "policeCar";
     }
 
-    return Phaser.Utils.Array.GetRandom<VehicleKind>(["normalCar", "taxi", "van"]);
+    return "normalCar";
+  }
+
+  private scaleVehicle(sprite: Phaser.Physics.Arcade.Sprite, kind: VehicleKind) {
+    const targetHeight = kind === "van" ? GAME_BALANCE.traffic.vanHeight : GAME_BALANCE.traffic.carHeight;
+    const scale = targetHeight / sprite.height;
+    sprite.setScale(scale);
   }
 
   private ensureVehicleTextures() {
-    (Object.keys(VEHICLE_TEXTURES) as VehicleKind[]).forEach((kind) => {
-      const key = VEHICLE_TEXTURES[kind];
+    COMMON_CAR_TEXTURES.forEach((key) => {
       if (this.scene.textures.exists(key)) {
         return;
       }
 
-      const width = kind === "van" ? 80 : 68;
-      const height = kind === "van" ? 138 : 124;
-      const graphics = this.scene.add.graphics();
-      graphics.fillStyle(0x020617, 0.32);
-      graphics.fillEllipse(width / 2, height / 2 + 6, width * 0.86, height * 0.9);
-      graphics.fillStyle(FALLBACK_COLORS[kind], 1);
-      graphics.fillRoundedRect(6, 6, width - 12, height - 12, 12);
-      graphics.lineStyle(4, 0x111827, 1);
-      graphics.strokeRoundedRect(6, 6, width - 12, height - 12, 12);
-      graphics.fillStyle(kind === "taxi" ? 0x111827 : 0xdbeafe, kind === "taxi" ? 0.85 : 0.9);
-      graphics.fillRoundedRect(width * 0.28, height * 0.16, width * 0.44, height * 0.18, 6);
-      graphics.fillStyle(kind === "policeCar" ? 0x2563eb : 0x111827, 0.28);
-      graphics.fillRoundedRect(width * 0.24, height * 0.46, width * 0.52, height * 0.18, 6);
-      graphics.fillStyle(0xfef3c7, 1);
-      graphics.fillRoundedRect(width * 0.32, 10, width * 0.14, 6, 2);
-      graphics.fillRoundedRect(width * 0.54, 10, width * 0.14, 6, 2);
-      graphics.fillStyle(0xef4444, 1);
-      graphics.fillRoundedRect(width * 0.32, height - 16, width * 0.14, 6, 2);
-      graphics.fillRoundedRect(width * 0.54, height - 16, width * 0.14, 6, 2);
-      graphics.generateTexture(key, width, height);
-      graphics.destroy();
+      this.generateFallbackTexture(key, "normalCar");
     });
+
+    const fallbackEntries = Object.entries(VEHICLE_TEXTURES) as Array<[VehicleKind, string]>;
+
+    fallbackEntries.forEach(([kind, key]) => {
+      if (this.scene.textures.exists(key)) {
+        return;
+      }
+
+      this.generateFallbackTexture(key, kind);
+    });
+  }
+
+  private generateFallbackTexture(key: string, kind: VehicleKind) {
+    const width = kind === "van" ? 80 : 68;
+    const height = kind === "van" ? 138 : 124;
+    const graphics = this.scene.add.graphics();
+    graphics.fillStyle(0x020617, 0.32);
+    graphics.fillEllipse(width / 2, height / 2 + 6, width * 0.86, height * 0.9);
+    graphics.fillStyle(FALLBACK_COLORS[kind], 1);
+    graphics.fillRoundedRect(6, 6, width - 12, height - 12, 12);
+    graphics.lineStyle(4, 0x111827, 1);
+    graphics.strokeRoundedRect(6, 6, width - 12, height - 12, 12);
+    graphics.fillStyle(kind === "taxi" ? 0x111827 : 0xdbeafe, kind === "taxi" ? 0.85 : 0.9);
+    graphics.fillRoundedRect(width * 0.28, height * 0.16, width * 0.44, height * 0.18, 6);
+    graphics.fillStyle(kind === "policeCar" ? 0x2563eb : 0x111827, 0.28);
+    graphics.fillRoundedRect(width * 0.24, height * 0.46, width * 0.52, height * 0.18, 6);
+    graphics.fillStyle(0xfef3c7, 1);
+    graphics.fillRoundedRect(width * 0.32, 10, width * 0.14, 6, 2);
+    graphics.fillRoundedRect(width * 0.54, 10, width * 0.14, 6, 2);
+    graphics.fillStyle(0xef4444, 1);
+    graphics.fillRoundedRect(width * 0.32, height - 16, width * 0.14, 6, 2);
+    graphics.fillRoundedRect(width * 0.54, height - 16, width * 0.14, 6, 2);
+    graphics.generateTexture(key, width, height);
+    graphics.destroy();
   }
 }

@@ -16,13 +16,15 @@ export class GameStateSystem {
       .rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x050505, 0.48)
       .setDepth(130);
     const titleText = scene.add
-      .text(centerX, centerY - 118, "PREPARADO PARA ROMPER TODO", {
+      .text(centerX, centerY - 118, "PREPARADO PARA\nROMPER TODO", {
         color: "#fff7ed",
         fontFamily: "Arial, sans-serif",
-        fontSize: "44px",
+        fontSize: "38px",
         fontStyle: "bold",
+        align: "center",
         stroke: "#111111",
         strokeThickness: 7,
+        wordWrap: { width: scene.scale.width - 56 },
       })
       .setOrigin(0.5)
       .setDepth(131);

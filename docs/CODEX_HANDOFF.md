@@ -8,6 +8,8 @@ Estado de referencia para continuar en una nueva sesión de Codex sin perder con
 - La base técnica ya existe: React + TypeScript + Vite + Phaser + Firebase + Zustand.
 - El gameplay queda congelado como MVP V1.0 para seguir luego con Firebase real/ranking/deploy.
 - V1.1 agrega modo local offline: sin `VITE_FIREBASE_*`, la partida se guarda en `localStorage` y el ranking muestra top 20 local.
+- V1.3 deja lista la capa Firebase real sin romper el modo local: `.env.example` vuelve a placeholders, existe `.env.local.example`, Auth evita alerts y Firestore ya contempla `carsDestroyed`.
+- V1.4 deja preparado Hosting/Production QA: scripts de deploy documentados, preview cubierto y checklist de authorized domains para Google Login.
 - El juego ya tiene loop funcional tipo arcade y el flujo de guardado/ranking está integrado desde React.
 - La portada principal ya usa la imagen `portada.png` con botón JUGAR.
 - En el freeze no se agregaron features nuevas; sólo se validó estado y se actualizó documentación.
@@ -40,6 +42,10 @@ Estado de referencia para continuar en una nueva sesión de Codex sin perder con
   - guardar score local,
   - ver ranking local,
   - jugar de nuevo sin credenciales.
+- Preparación Firebase real para:
+  - Google Login con mensajes claros,
+  - scores con `carsDestroyed`,
+  - leaderboard global con fallback local.
 - Documentación base:
   - arquitectura,
   - spec del juego,
@@ -93,18 +99,22 @@ Estado de referencia para continuar en una nueva sesión de Codex sin perder con
 - El evento de game over dispara guardado de partida cuando hay usuario logueado.
 - El leaderboard se actualiza al cerrar una partida válida.
 - Sin Firebase configurado o sin login, el score se guarda localmente en este navegador.
+- Si Firebase está configurado y Auth/Firestore responden, React guarda partida real y ranking global.
 - Los placeholders permiten seguir iterando sin arte final.
 
 ## Qué falta hacer
 
 - Validar el flujo real con credenciales Firebase correctas.
 - Preparar ranking/deploy definitivo.
+- Habilitar Google Sign-In y Firestore en Firebase Console para probar V1.3 end-to-end.
 - Revisar ajustes finos de gameplay, balance o presentación sólo si el próximo objetivo lo pide.
 - Llevar este estado a una sesión nueva sin re-derivar todo el contexto.
 
 ## Errores conocidos
 
 - Si faltan las variables de entorno de Firebase, Auth/Firestore quedan inactivos y el flujo de guardado/ranking falla con mensajes explícitos.
+- Si `.env.local` queda grabado con BOM, Vite puede no leer `VITE_FIREBASE_*` y la app cae otra vez en modo local.
+- Este entorno no tiene `firebase` CLI instalado, as? que el deploy real no se pudo ejecutar desde ac?.
 - El guardado de perfil de usuario tolera fallos, pero reporta por consola cuando no puede actualizar.
 - No hay otros errores bloqueantes documentados en este handoff.
 

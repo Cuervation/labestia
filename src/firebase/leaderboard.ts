@@ -30,6 +30,7 @@ export async function updateLeaderboard(result: GameRunResult) {
           displayName: result.displayName,
           bestScore: result.score,
           maxCombo: result.maxCombo,
+          carsDestroyed: result.carsDestroyed ?? null,
           updatedAt: serverTimestamp(),
         },
         { merge: true },
@@ -59,6 +60,7 @@ export async function getTopLeaderboard(limit = 20): Promise<LeaderboardEntry[]>
       displayName: String(data.displayName ?? "Jugador anonimo"),
       bestScore: Number(data.bestScore ?? 0),
       maxCombo: Number(data.maxCombo ?? 1),
+      carsDestroyed: typeof data.carsDestroyed === "number" ? Number(data.carsDestroyed) : null,
       updatedAt: data.updatedAt,
     };
   });

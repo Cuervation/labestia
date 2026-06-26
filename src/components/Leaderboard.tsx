@@ -40,6 +40,7 @@ export function Leaderboard() {
               displayName: entry.displayName,
               bestScore: entry.bestScore,
               maxCombo: entry.maxCombo,
+              carsDestroyed: entry.carsDestroyed,
             })),
           );
           setMode("global");
@@ -48,13 +49,15 @@ export function Leaderboard() {
       })
       .catch((unknownError: unknown) => {
         const message =
-          unknownError instanceof Error ? unknownError.message : "No se pudo cargar el ranking.";
+          unknownError instanceof Error
+            ? unknownError.message
+            : "No se pudo cargar el ranking global. Probamos con tu ranking local.";
         const localEntries = getLocalLeaderboard(20).map(mapLocalEntry);
 
         if (!cancelled) {
           setEntries(localEntries);
           setMode("local-fallback");
-          setError(localEntries.length > 0 ? null : message);
+          setError(localEntries.length > 0 ? null : "No se pudo cargar el ranking global y todavia no hay datos locales.");
         }
       })
       .finally(() => {

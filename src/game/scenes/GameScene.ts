@@ -213,35 +213,46 @@ export class GameScene extends Phaser.Scene {
     const graphics = this.add.graphics();
     const width = this.scale.width;
     const height = this.scale.height;
-    const roadLeft = 120;
-    const roadRight = width - 120;
+    const roadLeft = 118;
+    const roadRight = width - 118;
 
-    graphics.fillStyle(0x171717, 1);
+    graphics.fillStyle(0x201f1b, 1);
     graphics.fillRect(roadLeft, 0, roadRight - roadLeft, height);
 
-    graphics.fillStyle(0x2f2f2f, 1);
+    graphics.fillStyle(0x3b332b, 1);
     graphics.fillRect(0, 0, roadLeft, height);
     graphics.fillRect(roadRight, 0, roadLeft, height);
 
-    graphics.fillStyle(0x262626, 1);
-    for (let y = 0; y < height; y += 56) {
-      graphics.fillRect(0, y, roadLeft, 2);
-      graphics.fillRect(roadRight, y + 28, roadLeft, 2);
+    graphics.fillStyle(0x2b2924, 0.64);
+    for (let y = 128; y < height; y += 46) {
+      graphics.fillRect(roadLeft + 8, y, roadRight - roadLeft - 16, 2);
+    }
+    graphics.fillStyle(0x4b443c, 0.5);
+    for (let x = roadLeft + 18; x < roadRight - 18; x += 44) {
+      for (let y = 142; y < height; y += 64) {
+        graphics.fillRoundedRect(x, y + ((x / 44) % 2) * 18, 30, 18, 3);
+      }
     }
 
-    graphics.lineStyle(8, 0x9f1239, 0.42);
+    graphics.fillStyle(0x51463c, 1);
+    for (let y = 0; y < height; y += 56) {
+      graphics.fillRect(0, y, roadLeft, 2);
+      graphics.fillRect(roadRight, y + 28, width - roadRight, 2);
+    }
+
+    graphics.lineStyle(9, 0x9f1239, 0.55);
     graphics.lineBetween(roadLeft, 0, roadLeft, height);
     graphics.lineBetween(roadRight, 0, roadRight, height);
 
-    graphics.lineStyle(3, 0xfacc15, 0.32);
+    graphics.lineStyle(3, 0xfacc15, 0.42);
 
-    for (let x = 260; x < width - 160; x += 160) {
-      for (let y = 18; y < height; y += 86) {
+    for (let x = 236; x < width - 160; x += 156) {
+      for (let y = 150; y < height; y += 92) {
         graphics.lineBetween(x, y, x, y + 48);
       }
     }
 
-    graphics.lineStyle(4, 0xffffff, 0.2);
+    graphics.lineStyle(4, 0xffffff, 0.22);
     graphics.lineBetween(roadLeft + 18, 0, roadLeft + 18, height);
     graphics.lineBetween(roadRight - 18, 0, roadRight - 18, height);
 
@@ -256,9 +267,10 @@ export class GameScene extends Phaser.Scene {
 
   private drawStreetDetails(graphics: Phaser.GameObjects.Graphics, roadLeft: number, roadRight: number, height: number) {
     const details = [
-      { x: roadLeft + 72, y: 130, radius: 18 },
-      { x: roadRight - 210, y: 310, radius: 24 },
-      { x: roadLeft + 390, y: 520, radius: 15 },
+      { x: roadLeft + 74, y: 180, radius: 18 },
+      { x: roadRight - 210, y: 340, radius: 24 },
+      { x: roadLeft + 390, y: 560, radius: 15 },
+      { x: roadRight - 96, y: 760, radius: 20 },
     ];
 
     graphics.fillStyle(0x050505, 0.32);
@@ -266,25 +278,38 @@ export class GameScene extends Phaser.Scene {
       graphics.fillEllipse(detail.x, detail.y, detail.radius * 2, detail.radius);
     });
 
-    graphics.fillStyle(0xfacc15, 0.85);
-    graphics.fillRect(28, 96, 52, 10);
-    graphics.fillRect(roadRight + 42, 220, 58, 10);
-    graphics.fillStyle(0xef4444, 0.58);
-    graphics.fillRect(24, 110, 68, 12);
-    graphics.fillRect(roadRight + 32, 234, 74, 12);
+    graphics.fillStyle(0xfacc15, 0.88);
+    graphics.fillRect(28, 150, 52, 10);
+    graphics.fillRect(roadRight + 42, 260, 58, 10);
+    graphics.fillStyle(0xef4444, 0.62);
+    graphics.fillRect(24, 164, 68, 12);
+    graphics.fillRect(roadRight + 32, 274, 74, 12);
 
     graphics.lineStyle(2, 0xffffff, 0.18);
-    for (let y = 34; y < height; y += 120) {
+    for (let y = 146; y < height; y += 120) {
       graphics.strokeRect(24, y, 54, 34);
       graphics.strokeRect(roadRight + 42, y + 44, 54, 34);
     }
 
-    this.drawCone(graphics, roadLeft + 42, 250);
-    this.drawCone(graphics, roadRight - 44, 470);
-    this.drawTrashBin(graphics, 36, 360);
-    this.drawTrashBin(graphics, roadRight + 58, 580);
-    this.drawBarrioSign(graphics, roadRight + 24, 88, "SAN\nBLAS");
-    this.drawBarrioSign(graphics, 18, 612, "PARE");
+    this.drawTree(graphics, 66, 240);
+    this.drawTree(graphics, roadRight + 64, 430);
+    this.drawTree(graphics, 56, 720);
+    this.drawCone(graphics, roadLeft + 42, 330);
+    this.drawCone(graphics, roadRight - 44, 540);
+    this.drawTrashBin(graphics, 36, 410);
+    this.drawTrashBin(graphics, roadRight + 58, 650);
+    this.drawBarrioSign(graphics, roadRight + 24, 150, "SAN\nBLAS");
+    this.drawBarrioSign(graphics, 18, 690, "PARE");
+  }
+
+  private drawTree(graphics: Phaser.GameObjects.Graphics, x: number, y: number) {
+    graphics.fillStyle(0x2f1f12, 0.92);
+    graphics.fillRoundedRect(x - 7, y + 8, 14, 48, 5);
+    graphics.fillStyle(0x14532d, 0.76);
+    graphics.fillCircle(x, y, 38);
+    graphics.fillStyle(0x166534, 0.68);
+    graphics.fillCircle(x - 22, y + 16, 26);
+    graphics.fillCircle(x + 20, y + 12, 28);
   }
 
   private drawCone(graphics: Phaser.GameObjects.Graphics, x: number, y: number) {

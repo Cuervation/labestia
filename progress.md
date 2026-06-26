@@ -121,3 +121,14 @@
 
 - Offline V1.1 validation passed without .env Firebase: / loads, /play local mode appears, game over saves local score, /ranking shows local leaderboard, second score persists, no Firebase console noise.
 - Final checks passed: npm run typecheck and npm run build; existing Vite chunk-size warning remains non-blocking.
+
+
+- Firebase V1.3 prep: restored .env.example to placeholders, added .env.local.example, removed auth alerts in favor of inline messages, and extended Firestore score/leaderboard data with carsDestroyed.
+- Important gotcha: .env files written with UTF-8 BOM made Vite ignore VITE_FIREBASE_* and forced the app back into modo local; rewrote env examples/local file as UTF-8 without BOM.
+- Smoke: without .env.local the local fallback still works; with .env.local the app boots in modo practica with Google login CTA. Real Auth/Firestore flow remains pending until Firebase Console is enabled.
+
+
+- Firebase Hosting Deploy + Production QA V1.4: documented deploy flow for Hosting + Firestore rules, added deploy:rules script, and documented production checks for SPA routes and authorized domains.
+- Verified current repo locally: typecheck/build pass, firebase.json serves dist with SPA rewrite, and this environment lacks Firebase CLI so real deploy must be run manually after firebase login + firebase use --add.
+
+- Gameplay visual pass: HUD restyled toward the mobile mock with black top bar/logo/timer/score/combo, street background gained cobblestone/vereda/arboles/details, and mobile touch buttons were restyled as circular arcade controls. Typecheck passed; visual smoke captured /play with Playwright.

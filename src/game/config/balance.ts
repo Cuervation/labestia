@@ -68,7 +68,7 @@ export const GAME_BALANCE = {
     colliderOffsetXRatio: 0.15,
     colliderOffsetYRatio: 0.14,
     explosionSize: 116,
-    lanes: [180, 340, 500, 660, 820, 980, 1140],
+    lanes: [180, 260, 340, 420, 500, 580],
     easy: {
       spawnEveryMs: 980,
       minSpeed: 170,

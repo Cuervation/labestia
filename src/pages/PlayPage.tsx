@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { GameCanvas, GameOverPanel, LoginButton } from "../components";
+import { GameCanvas, GameOverPanel } from "../components";
 import { isFirebaseConfigured, saveGameRun, updateLeaderboard } from "../firebase";
 import type { GameRunResult } from "../firebase";
 import { saveLocalScore } from "../storage/localScores";
@@ -70,6 +70,7 @@ export function PlayPage() {
         displayName: user.displayName,
         score,
         maxCombo,
+        carsDestroyed,
         durationSeconds,
       };
 
@@ -112,17 +113,8 @@ export function PlayPage() {
   }, [user]);
 
   return (
-    <section className="play-layout">
+    <section className="play-layout play-screen">
       <div className="play-main">
-        <div className="page-heading">
-          <span className="eyebrow">{isFirebaseConfigured ? "Modo arcade" : "Modo local"}</span>
-          <h1>Jugar</h1>
-          <p>
-            {isFirebaseConfigured
-              ? "Canvas Phaser centrado. Firebase y UI viven afuera del juego."
-              : "Podes jugar completo sin Firebase: el score se guarda en este navegador."}
-          </p>
-        </div>
         <GameCanvas key={gameKey} />
         <div className="mobile-controls" aria-label="Controles tactiles">
           <button
@@ -151,31 +143,17 @@ export function PlayPage() {
           </button>
         </div>
         {gameOverResult ? (
-          <GameOverPanel
-            {...gameOverResult}
-            onRestart={() => {
-              setGameOverResult(null);
-              setGameKey((currentKey) => currentKey + 1);
-            }}
-          />
+          <div className="game-over-overlay">
+            <GameOverPanel
+              {...gameOverResult}
+              onRestart={() => {
+                setGameOverResult(null);
+                setGameKey((currentKey) => currentKey + 1);
+              }}
+            />
+          </div>
         ) : null}
       </div>
-
-      <aside className="play-sidebar panel">
-        <h2>Cabina</h2>
-        <p>{user ? `Jugador: ${user.displayName}` : "Sin login. Podes jugar igual."}</p>
-        {!isFirebaseConfigured ? <p className="mode-badge">Modo local: ranking solo en este navegador.</p> : null}
-        <p>
-          Ultimo score: <strong>{gameOverResult ? gameOverResult.score : "—"}</strong>
-        </p>
-        <p>
-          Estado: <strong>{isFirebaseConfigured && user ? "Guardado global" : "Guardado local"}</strong>
-        </p>
-        <div className="sidebar-actions">
-          <a className="secondary-link" href="/">Volver</a>
-          <LoginButton />
-        </div>
-      </aside>
     </section>
   );
 }

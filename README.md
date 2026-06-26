@@ -30,15 +30,52 @@ Arcade web top-down de autos hecho con React, TypeScript, Vite, Phaser, Firebase
 - No guardar score si no hay usuario logueado.
 - Si faltan variables `VITE_FIREBASE_*`, la app usa ranking local y no requiere credenciales.
 
+## Demo local sin Firebase
+
+- Si no existe `.env.local`, el juego entra en modo local.
+- Las partidas se guardan en `localStorage`.
+- `/ranking` muestra top 20 local del navegador.
+- El login no rompe la app: queda degradado como modo local.
+
+## Configurar Firebase real
+
+1. Copiar `.env.local.example` a `.env.local`.
+2. Completar las variables `VITE_FIREBASE_*` con datos de tu Web App de Firebase.
+3. Habilitar Google Sign-In en Firebase Authentication.
+4. Crear Firestore y aplicar `firestore.rules`.
+5. Guardar `.env.local` como UTF-8 sin BOM.
+
+Mientras eso no exista, el fallback local sigue funcionando.
+
 ## Scripts
 
 ```bash
+npm install
 npm run dev
 npm run typecheck
 npm run build
 npm run preview
+npm run deploy:rules
 npm run deploy:hosting
 ```
+
+## Deploy Firebase Hosting
+
+1. Configurar `.env.local` con `VITE_FIREBASE_*`.
+2. Verificar Google Sign-In y Firestore en Firebase Console.
+3. Correr:
+
+```bash
+npm run typecheck
+npm run build
+npm run preview
+firebase login
+firebase use --add
+npm run deploy:rules
+npm run deploy:hosting
+```
+
+En producción, revisar también **Authentication > Settings > Authorized domains** para que el dominio de Hosting permita Google Login.
 
 ## Estructura
 

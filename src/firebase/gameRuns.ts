@@ -12,6 +12,7 @@ export async function saveGameRun(result: GameRunResult) {
     displayName: result.displayName,
     score: result.score,
     maxCombo: result.maxCombo,
+    carsDestroyed: result.carsDestroyed ?? null,
     durationSeconds: result.durationSeconds,
     createdAt: serverTimestamp(),
   });

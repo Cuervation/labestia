@@ -3,6 +3,11 @@ export const ASSET_KEYS = {
   playerCenter: "player-center",
   playerLeft: "player-left",
   playerRight: "player-right",
+  chery: "chery",
+  eco: "eco",
+  focus: "focus",
+  meriva: "meriva",
+  renault: "renault",
   normalCar: "normal-car",
   taxi: "taxi",
   policeCar: "police-car",
@@ -26,6 +31,26 @@ export const ASSET_MANIFEST = [
     path: "/assets/player-right.png",
   },
   {
+    key: ASSET_KEYS.chery,
+    path: "/assets/chery.png",
+  },
+  {
+    key: ASSET_KEYS.eco,
+    path: "/assets/eco.png",
+  },
+  {
+    key: ASSET_KEYS.focus,
+    path: "/assets/Focus.png",
+  },
+  {
+    key: ASSET_KEYS.meriva,
+    path: "/assets/meriva.png",
+  },
+  {
+    key: ASSET_KEYS.renault,
+    path: "/assets/renault.png",
+  },
+  {
     key: ASSET_KEYS.normalCar,
     path: "/assets/placeholders/normal-car.svg",
   },
@@ -35,7 +60,7 @@ export const ASSET_MANIFEST = [
   },
   {
     key: ASSET_KEYS.policeCar,
-    path: "/assets/placeholders/police-car.svg",
+    path: "/assets/police-car.png",
   },
   {
     key: ASSET_KEYS.van,

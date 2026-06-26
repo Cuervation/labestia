@@ -9,6 +9,7 @@ export type GameRunResult = {
   displayName: string;
   score: number;
   maxCombo: number;
+  carsDestroyed?: number | null;
   durationSeconds: number;
 };
 
@@ -17,5 +18,6 @@ export type LeaderboardEntry = {
   displayName: string;
   bestScore: number;
   maxCombo: number;
+  carsDestroyed?: number | null;
   updatedAt?: unknown;
 };
