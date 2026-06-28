@@ -33,7 +33,6 @@ export async function updateLeaderboard(result: GameRunResult) {
           carsDestroyed: result.carsDestroyed ?? null,
           updatedAt: serverTimestamp(),
         },
-        { merge: true },
       );
     }
   });

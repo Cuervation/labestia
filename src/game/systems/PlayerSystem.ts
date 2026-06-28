@@ -7,7 +7,7 @@ export class PlayerSystem {
   private readonly cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private readonly wasd?: Record<string, Phaser.Input.Keyboard.Key>;
   private readonly pressedKeys = new Set<string>();
-  private slowUntil = 0;
+  private steeringLockedUntil = 0;
   private touchDirection = 0;
   private currentTextureKey: string = ASSET_KEYS.playerCenter;
   private readonly handleKeyDown = (event: KeyboardEvent) => {
@@ -62,10 +62,17 @@ export class PlayerSystem {
     }
 
     direction = Phaser.Math.Clamp(direction, -1, 1);
+    if (this.isSteeringLocked(time)) {
+      direction = 0;
+    }
 
-    const policeSlow = time < this.slowUntil ? GAME_BALANCE.policeSlowMultiplier : 1;
-    const speed = GAME_BALANCE.player.baseSpeed * speedMultiplier * policeSlow;
-    const velocityX = direction * speed;
+    const speed = GAME_BALANCE.player.baseSpeed * speedMultiplier;
+    const x = Phaser.Math.Clamp(this.sprite.x, GAME_BALANCE.player.minX, GAME_BALANCE.player.maxX);
+    this.sprite.setX(x);
+
+    const hitsLeftEdge = x <= GAME_BALANCE.player.minX && direction < 0;
+    const hitsRightEdge = x >= GAME_BALANCE.player.maxX && direction > 0;
+    const velocityX = hitsLeftEdge || hitsRightEdge ? 0 : direction * speed;
 
     this.sprite.setVelocityX(velocityX);
     this.sprite.setVelocityY(0);
@@ -79,8 +86,8 @@ export class PlayerSystem {
     }
   }
 
-  applyPoliceSlow(time: number) {
-    this.slowUntil = time + GAME_BALANCE.policeSlowDurationMs;
+  applyPoliceTurnLock(time: number) {
+    this.steeringLockedUntil = time + GAME_BALANCE.policeTurnLockDurationMs;
   }
 
   idle() {
@@ -88,8 +95,8 @@ export class PlayerSystem {
     this.setTexture(ASSET_KEYS.playerCenter);
   }
 
-  isSlowed(time: number) {
-    return time < this.slowUntil;
+  isSteeringLocked(time: number) {
+    return time < this.steeringLockedUntil;
   }
 
   getFacing() {

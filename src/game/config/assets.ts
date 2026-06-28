@@ -13,9 +13,25 @@ export const ASSET_KEYS = {
   policeCar: "police-car",
   van: "van",
   explosion: "explosion",
+  riderOsky: "rider-osky",
+  riderGaston: "rider-gaston",
 } as const;
 
 export type AssetKey = (typeof ASSET_KEYS)[keyof typeof ASSET_KEYS];
+
+export const STREET_ASSETS = [
+  { key: "street-001", path: "/assets/streets/street_001.png" },
+  { key: "street-002", path: "/assets/streets/street_002.png" },
+  { key: "street-003", path: "/assets/streets/street_003.png" },
+  { key: "street-004", path: "/assets/streets/street_004.png" },
+  { key: "street-005", path: "/assets/streets/street_005.png" },
+  { key: "street-006", path: "/assets/streets/street_006.png" },
+  { key: "street-007", path: "/assets/streets/street_007.png" },
+  { key: "street-008", path: "/assets/streets/street_008.png" },
+  { key: "street-009", path: "/assets/streets/street_009.png" },
+  { key: "street-010", path: "/assets/streets/street_010.png" },
+  { key: "street-011", path: "/assets/streets/street_011.png" },
+] as const;
 
 export const ASSET_MANIFEST = [
   {
@@ -70,4 +86,13 @@ export const ASSET_MANIFEST = [
     key: ASSET_KEYS.explosion,
     path: "/assets/placeholders/explosion.svg",
   },
+  {
+    key: ASSET_KEYS.riderOsky,
+    path: "/assets/rider_osky.png",
+  },
+  {
+    key: ASSET_KEYS.riderGaston,
+    path: "/assets/rider_gaston.png",
+  },
+  ...STREET_ASSETS,
 ] as const;

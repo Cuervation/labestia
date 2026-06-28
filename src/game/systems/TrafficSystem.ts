@@ -88,12 +88,12 @@ export class TrafficSystem {
 
     const body = sprite.body as Phaser.Physics.Arcade.Body;
     body.setSize(
-      sprite.displayWidth * GAME_BALANCE.traffic.colliderWidthRatio,
-      sprite.displayHeight * GAME_BALANCE.traffic.colliderHeightRatio,
+      sprite.width * GAME_BALANCE.traffic.colliderWidthRatio,
+      sprite.height * GAME_BALANCE.traffic.colliderHeightRatio,
     );
     body.setOffset(
-      sprite.displayWidth * GAME_BALANCE.traffic.colliderOffsetXRatio,
-      sprite.displayHeight * GAME_BALANCE.traffic.colliderOffsetYRatio,
+      sprite.width * GAME_BALANCE.traffic.colliderOffsetXRatio,
+      sprite.height * GAME_BALANCE.traffic.colliderOffsetYRatio,
     );
   }
 

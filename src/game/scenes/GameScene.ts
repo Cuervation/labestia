@@ -1,12 +1,14 @@
 import Phaser from "phaser";
 import { GAME_BALANCE } from "../config/balance";
-import { AudioSystem, EffectsSystem, GameStateSystem, HudSystem, MissionSystem, PlayerSystem, ScoringSystem, TrafficSystem } from "../systems";
+import { STREET_ASSETS } from "../config/assets";
+import { AudioSystem, EffectsSystem, GameStateSystem, HudSystem, MissionSystem, PlayerSystem, RiderSystem, ScoringSystem, TrafficSystem } from "../systems";
 import type { VehicleKind } from "../types";
 
 export class GameScene extends Phaser.Scene {
   private player?: PlayerSystem;
   private scoring?: ScoringSystem;
   private traffic?: TrafficSystem;
+  private riders?: RiderSystem;
   private effects?: EffectsSystem;
   private hud?: HudSystem;
   private missions?: MissionSystem;
@@ -15,6 +17,7 @@ export class GameScene extends Phaser.Scene {
   private gameOverSent = false;
   private smokeAccumulatorMs = 0;
   private simulatedTime = 0;
+  private roadTiles: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super("GameScene");
@@ -30,6 +33,7 @@ export class GameScene extends Phaser.Scene {
     this.player = new PlayerSystem(this);
     this.scoring = new ScoringSystem();
     this.traffic = new TrafficSystem(this);
+    this.riders = new RiderSystem(this);
     this.effects = new EffectsSystem(this);
     this.hud = new HudSystem(this);
     this.missions = new MissionSystem();
@@ -41,6 +45,13 @@ export class GameScene extends Phaser.Scene {
       this.traffic.group,
       (_playerObject, vehicleObject) => {
         this.handleVehicleCollision(vehicleObject as Phaser.Physics.Arcade.Sprite);
+      },
+    );
+    this.physics.add.overlap(
+      this.player.sprite,
+      this.riders.group,
+      (_playerObject, riderObject) => {
+        this.handleRiderCollision(riderObject as Phaser.Physics.Arcade.Sprite);
       },
     );
 
@@ -73,6 +84,7 @@ export class GameScene extends Phaser.Scene {
       !this.player ||
       !this.scoring ||
       !this.traffic ||
+      !this.riders ||
       !this.effects ||
       !this.hud ||
       !this.missions ||
@@ -91,8 +103,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.scoring.update(delta);
+    this.updateRoad(delta);
     this.player.update(time, this.scoring.getPlayerSpeedMultiplier());
     this.traffic.update(time, this.scoring.getDifficulty());
+    this.riders.update(time);
     this.hud.update(this.scoring, this.missions.getSnapshots());
     this.effects.updateBestiaAura(this.player.sprite, this.scoring.bestiaModeActive);
     this.emitSmoke(delta);
@@ -152,12 +166,36 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (kind === "policeCar") {
-      this.player.applyPoliceSlow(this.simulatedTime);
-      this.effects.floatingText(this.player.sprite.x, this.player.sprite.y - 80, "POLICIA: SLOW", {
+      this.player.applyPoliceTurnLock(this.simulatedTime);
+      this.effects.floatingText(this.player.sprite.x, this.player.sprite.y - 80, "POLICIA: SIN GIRO", {
         color: "#93c5fd",
         fontSize: 34,
       });
     }
+  }
+
+  private handleRiderCollision(riderSprite: Phaser.Physics.Arcade.Sprite) {
+    if (!this.scoring || !this.riders || !this.effects || this.gameOverSent || !riderSprite.active) {
+      return;
+    }
+
+    const rider = this.riders.getRider(riderSprite);
+    const points = GAME_BALANCE.riders.basePoints * GAME_BALANCE.riders.scoreMultiplier;
+    const x = riderSprite.x;
+    const y = riderSprite.y;
+
+    this.riders.destroyRider(riderSprite);
+    this.scoring.addBonus(points);
+    this.effects.floatingText(x, y - 34, `${rider.label} x${GAME_BALANCE.riders.scoreMultiplier}`, {
+      color: rider.kind === "osky" ? "#facc15" : "#fb7185",
+      fontSize: 34,
+      rise: 78,
+    });
+    this.effects.floatingText(x, y - 76, `+${points}`, {
+      color: "#86efac",
+      fontSize: 44,
+      rise: 90,
+    });
   }
 
   private emitSmoke(delta: number) {
@@ -190,6 +228,7 @@ export class GameScene extends Phaser.Scene {
     this.audio?.playGameOver();
     this.effects.clearBestiaAura();
     this.traffic?.clearVehicles();
+    this.riders?.clearRiders();
     this.physics.pause();
 
     window.dispatchEvent(
@@ -210,145 +249,37 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawRoad() {
-    const graphics = this.add.graphics();
-    const width = this.scale.width;
-    const height = this.scale.height;
-    const roadLeft = 118;
-    const roadRight = width - 118;
+    this.roadTiles = [];
 
-    graphics.fillStyle(0x201f1b, 1);
-    graphics.fillRect(roadLeft, 0, roadRight - roadLeft, height);
-
-    graphics.fillStyle(0x3b332b, 1);
-    graphics.fillRect(0, 0, roadLeft, height);
-    graphics.fillRect(roadRight, 0, roadLeft, height);
-
-    graphics.fillStyle(0x2b2924, 0.64);
-    for (let y = 128; y < height; y += 46) {
-      graphics.fillRect(roadLeft + 8, y, roadRight - roadLeft - 16, 2);
-    }
-    graphics.fillStyle(0x4b443c, 0.5);
-    for (let x = roadLeft + 18; x < roadRight - 18; x += 44) {
-      for (let y = 142; y < height; y += 64) {
-        graphics.fillRoundedRect(x, y + ((x / 44) % 2) * 18, 30, 18, 3);
-      }
+    if (STREET_ASSETS.some((asset) => !this.textures.exists(asset.key))) {
+      this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x171717).setDepth(0);
+      return;
     }
 
-    graphics.fillStyle(0x51463c, 1);
-    for (let y = 0; y < height; y += 56) {
-      graphics.fillRect(0, y, roadLeft, 2);
-      graphics.fillRect(roadRight, y + 28, width - roadRight, 2);
-    }
-
-    graphics.lineStyle(9, 0x9f1239, 0.55);
-    graphics.lineBetween(roadLeft, 0, roadLeft, height);
-    graphics.lineBetween(roadRight, 0, roadRight, height);
-
-    graphics.lineStyle(3, 0xfacc15, 0.42);
-
-    for (let x = 236; x < width - 160; x += 156) {
-      for (let y = 150; y < height; y += 92) {
-        graphics.lineBetween(x, y, x, y + 48);
-      }
-    }
-
-    graphics.lineStyle(4, 0xffffff, 0.22);
-    graphics.lineBetween(roadLeft + 18, 0, roadLeft + 18, height);
-    graphics.lineBetween(roadRight - 18, 0, roadRight - 18, height);
-
-    graphics.fillStyle(0xffffff, 0.52);
-    for (let x = roadLeft + 40; x < roadRight - 40; x += 58) {
-      graphics.fillRect(x, height - 74, 32, 74);
-    }
-
-    this.drawStreetDetails(graphics, roadLeft, roadRight, height);
-    graphics.setDepth(0);
-  }
-
-  private drawStreetDetails(graphics: Phaser.GameObjects.Graphics, roadLeft: number, roadRight: number, height: number) {
-    const details = [
-      { x: roadLeft + 74, y: 180, radius: 18 },
-      { x: roadRight - 210, y: 340, radius: 24 },
-      { x: roadLeft + 390, y: 560, radius: 15 },
-      { x: roadRight - 96, y: 760, radius: 20 },
-    ];
-
-    graphics.fillStyle(0x050505, 0.32);
-    details.forEach((detail) => {
-      graphics.fillEllipse(detail.x, detail.y, detail.radius * 2, detail.radius);
+    let y = 0;
+    STREET_ASSETS.forEach((asset) => {
+      const tile = this.add.image(this.scale.width / 2, y, asset.key).setOrigin(0.5, 0).setDepth(0);
+      const source = this.textures.get(asset.key).getSourceImage() as HTMLImageElement;
+      const scale = this.scale.width / source.width;
+      tile.setDisplaySize(this.scale.width, source.height * scale);
+      this.roadTiles.push(tile);
+      y += tile.displayHeight;
     });
+  }
 
-    graphics.fillStyle(0xfacc15, 0.88);
-    graphics.fillRect(28, 150, 52, 10);
-    graphics.fillRect(roadRight + 42, 260, 58, 10);
-    graphics.fillStyle(0xef4444, 0.62);
-    graphics.fillRect(24, 164, 68, 12);
-    graphics.fillRect(roadRight + 32, 274, 74, 12);
-
-    graphics.lineStyle(2, 0xffffff, 0.18);
-    for (let y = 146; y < height; y += 120) {
-      graphics.strokeRect(24, y, 54, 34);
-      graphics.strokeRect(roadRight + 42, y + 44, 54, 34);
+  private updateRoad(delta: number) {
+    if (this.roadTiles.length === 0) {
+      return;
     }
 
-    this.drawTree(graphics, 66, 240);
-    this.drawTree(graphics, roadRight + 64, 430);
-    this.drawTree(graphics, 56, 720);
-    this.drawCone(graphics, roadLeft + 42, 330);
-    this.drawCone(graphics, roadRight - 44, 540);
-    this.drawTrashBin(graphics, 36, 410);
-    this.drawTrashBin(graphics, roadRight + 58, 650);
-    this.drawBarrioSign(graphics, roadRight + 24, 150, "SAN\nBLAS");
-    this.drawBarrioSign(graphics, 18, 690, "PARE");
-  }
+    const speed = 220 * (delta / 1000);
+    const topY = () => Math.min(...this.roadTiles.map((tile) => tile.y));
 
-  private drawTree(graphics: Phaser.GameObjects.Graphics, x: number, y: number) {
-    graphics.fillStyle(0x2f1f12, 0.92);
-    graphics.fillRoundedRect(x - 7, y + 8, 14, 48, 5);
-    graphics.fillStyle(0x14532d, 0.76);
-    graphics.fillCircle(x, y, 38);
-    graphics.fillStyle(0x166534, 0.68);
-    graphics.fillCircle(x - 22, y + 16, 26);
-    graphics.fillCircle(x + 20, y + 12, 28);
-  }
-
-  private drawCone(graphics: Phaser.GameObjects.Graphics, x: number, y: number) {
-    graphics.fillStyle(0xf97316, 0.92);
-    graphics.fillTriangle(x, y - 18, x - 15, y + 18, x + 15, y + 18);
-    graphics.fillStyle(0xffffff, 0.82);
-    graphics.fillRect(x - 10, y + 2, 20, 5);
-    graphics.fillStyle(0x111111, 0.55);
-    graphics.fillRect(x - 18, y + 18, 36, 6);
-  }
-
-  private drawTrashBin(graphics: Phaser.GameObjects.Graphics, x: number, y: number) {
-    graphics.fillStyle(0x14532d, 0.9);
-    graphics.fillRoundedRect(x, y, 34, 44, 5);
-    graphics.fillStyle(0x052e16, 0.9);
-    graphics.fillRoundedRect(x - 3, y - 8, 40, 10, 4);
-    graphics.lineStyle(2, 0xbbf7d0, 0.25);
-    graphics.lineBetween(x + 8, y + 8, x + 8, y + 36);
-    graphics.lineBetween(x + 20, y + 8, x + 20, y + 36);
-  }
-
-  private drawBarrioSign(graphics: Phaser.GameObjects.Graphics, x: number, y: number, label: string) {
-    graphics.fillStyle(label === "PARE" ? 0x7f1d1d : 0x0f3b57, 0.92);
-    graphics.fillRoundedRect(x, y, 72, 44, 5);
-    graphics.lineStyle(2, 0xffffff, 0.45);
-    graphics.strokeRoundedRect(x, y, 72, 44, 5);
-    graphics.fillStyle(0xffffff, 0.86);
-    const lines = label.split("\n");
-    lines.forEach((line, index) => {
-      const text = this.add
-        .text(x + 36, y + 8 + index * 15, line, {
-          color: "#fff7ed",
-          fontFamily: "Arial, sans-serif",
-          fontSize: "12px",
-          fontStyle: "bold",
-        })
-        .setOrigin(0.5, 0)
-        .setDepth(1);
-      text.setAlpha(0.86);
+    this.roadTiles.forEach((tile) => {
+      tile.y += speed;
+      if (tile.y >= this.scale.height) {
+        tile.y = topY() - tile.displayHeight;
+      }
     });
   }
 
@@ -382,6 +313,14 @@ export class GameScene extends Phaser.Scene {
       remainingSeconds: Math.ceil(this.scoring?.remainingSeconds ?? GAME_BALANCE.durationSeconds),
       missions: this.missions?.getSnapshots() ?? [],
       traffic,
+      riders: this.riders?.group.getChildren().map((child) => {
+        const sprite = child as Phaser.Physics.Arcade.Sprite;
+        return {
+          kind: sprite.getData("riderKind") as string,
+          x: Math.round(sprite.x),
+          y: Math.round(sprite.y),
+        };
+      }) ?? [],
     });
   }
 
