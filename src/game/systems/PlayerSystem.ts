@@ -7,6 +7,9 @@ export class PlayerSystem {
   private readonly cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private readonly wasd?: Record<string, Phaser.Input.Keyboard.Key>;
   private readonly pressedKeys = new Set<string>();
+  private readonly laneXs = GAME_BALANCE.traffic.lanes;
+  private currentLaneIndex = 0;
+  private lastInputDirection = 0;
   private steeringLockedUntil = 0;
   private touchDirection = 0;
   private currentTextureKey: string = ASSET_KEYS.playerCenter;
@@ -24,9 +27,10 @@ export class PlayerSystem {
 
   constructor(private readonly scene: Phaser.Scene) {
     this.ensurePlayerTextures();
+    this.currentLaneIndex = this.getNearestLaneIndex(scene.scale.width / 2);
 
     this.sprite = scene.physics.add.sprite(
-      scene.scale.width / 2,
+      this.laneXs[this.currentLaneIndex] ?? scene.scale.width / 2,
       scene.scale.height - 130,
       ASSET_KEYS.playerCenter,
     );
@@ -51,7 +55,7 @@ export class PlayerSystem {
     this.scene.events.once(Phaser.Scenes.Events.DESTROY, () => this.cleanupInputListeners());
   }
 
-  update(time: number, speedMultiplier: number) {
+  update(time: number, speedMultiplier: number, invertHorizontalInput = false) {
     let direction = this.touchDirection;
 
     if (this.isPressed("ArrowLeft", this.cursors?.left.isDown, this.wasd?.A.isDown)) {
@@ -62,20 +66,24 @@ export class PlayerSystem {
     }
 
     direction = Phaser.Math.Clamp(direction, -1, 1);
+    if (invertHorizontalInput) {
+      direction *= -1;
+    }
+
     if (this.isSteeringLocked(time)) {
       direction = 0;
     }
 
-    const speed = GAME_BALANCE.player.baseSpeed * speedMultiplier;
-    const x = Phaser.Math.Clamp(this.sprite.x, GAME_BALANCE.player.minX, GAME_BALANCE.player.maxX);
-    this.sprite.setX(x);
+    if (direction === 0) {
+      this.lastInputDirection = 0;
+    } else if (direction !== this.lastInputDirection) {
+      this.moveOneLane(direction);
+      this.lastInputDirection = direction;
+    }
 
-    const hitsLeftEdge = x <= GAME_BALANCE.player.minX && direction < 0;
-    const hitsRightEdge = x >= GAME_BALANCE.player.maxX && direction > 0;
-    const velocityX = hitsLeftEdge || hitsRightEdge ? 0 : direction * speed;
-
-    this.sprite.setVelocityX(velocityX);
-    this.sprite.setVelocityY(0);
+    const laneX = this.laneXs[this.currentLaneIndex] ?? this.sprite.x;
+    this.sprite.setX(laneX);
+    this.sprite.setVelocity(0, 0);
 
     if (direction < 0) {
       this.setTexture(ASSET_KEYS.playerLeft);
@@ -154,5 +162,25 @@ export class PlayerSystem {
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("keyup", this.handleKeyUp);
     window.removeEventListener("laBestia:playerControl", this.handleTouchControl);
+  }
+
+  private moveOneLane(direction: number) {
+    const nextIndex = this.currentLaneIndex + direction;
+    this.currentLaneIndex = Phaser.Math.Clamp(nextIndex, 0, this.laneXs.length - 1);
+  }
+
+  private getNearestLaneIndex(x: number) {
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    this.laneXs.forEach((laneX, index) => {
+      const distance = Math.abs(laneX - x);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    return nearestIndex;
   }
 }

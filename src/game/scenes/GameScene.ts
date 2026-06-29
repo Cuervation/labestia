@@ -111,7 +111,7 @@ export class GameScene extends Phaser.Scene {
     this.scoring.update(delta);
     this.missions.update(this.scoring.elapsedSeconds * 1000);
     this.updateRoad(delta);
-    this.player.update(time, this.scoring.getPlayerSpeedMultiplier());
+    this.player.update(time, this.scoring.getPlayerSpeedMultiplier(), this.isWhistleDialogActive(time));
     this.traffic.update(time, this.scoring.getDifficulty());
     this.riders.update(time);
     this.hud.update(this.scoring, this.missions.getSnapshots());
@@ -299,6 +299,8 @@ export class GameScene extends Phaser.Scene {
       this.scoring.bestiaActivations,
       this.missions?.getEndTitle(this.scoring),
     );
+
+    this.scene.pause();
   }
 
   private formatCarModel(model?: string) {
@@ -359,18 +361,12 @@ export class GameScene extends Phaser.Scene {
 
     const side = Phaser.Math.Between(0, 1) === 0 ? "left" : "right";
     const x = side === "left" ? GAME_BALANCE.streetEvents.womanLeftX : GAME_BALANCE.streetEvents.womanRightX;
+    const maxY = Math.min(this.scale.height - 260, GAME_BALANCE.streetEvents.womanMaxY);
+    const y = Phaser.Math.Between(GAME_BALANCE.streetEvents.womanMinY, Math.max(GAME_BALANCE.streetEvents.womanMinY, maxY));
     const woman = this.add
-      .image(x, GAME_BALANCE.streetEvents.womanY, ASSET_KEYS.woman)
+      .image(x, y, ASSET_KEYS.woman)
       .setScale(GAME_BALANCE.streetEvents.womanScale)
       .setDepth(5);
-    this.tweens.add({
-      targets: woman,
-      y: woman.y + 6,
-      duration: 900,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
     this.streetDecorations.push(woman);
     this.showWhistleDialog();
   }
@@ -432,6 +428,10 @@ export class GameScene extends Phaser.Scene {
     const { x, y } = this.getWhistleAnchor();
     this.redrawWhistleDialog(this.whistleDialog.bubble, x, y);
     this.whistleDialog.text.setPosition(x, y - 4);
+  }
+
+  private isWhistleDialogActive(time: number) {
+    return Boolean(this.whistleDialog && time < this.whistleDialog.expiresAt);
   }
 
   private getWhistleAnchor() {

@@ -91,7 +91,7 @@ export const GAME_BALANCE = {
   player: {
     baseSpeed: 395,
     spriteScale: 0.42,
-    width: 250,
+    width: 190,
     height: 430,
     minX: 210,
     maxX: 510,
@@ -105,7 +105,7 @@ export const GAME_BALANCE = {
     rappiDurationMs: 8000,
     pedidosYaBonusMultiplier: 1.5,
     pedidosYaDurationMs: 8000,
-    colliderWidthRatio: 0.72,
+    colliderWidthRatio: 0.56,
     colliderHeightRatio: 0.82,
     colliderOffsetXRatio: 0.14,
     colliderOffsetYRatio: 0.09,
@@ -123,7 +123,7 @@ export const GAME_BALANCE = {
     explosionSize: 116,
     minVehicleGap: 190,
     focusSpeedMultiplier: 1.28,
-    lanes: [258, 360, 466],
+    lanes: [258, 360, 462],
     easy: {
       spawnEveryMs: 920,
       minSpeed: 160,
@@ -166,9 +166,10 @@ export const GAME_BALANCE = {
   },
   streetEvents: {
     womanScale: 0.082,
-    womanY: 170,
-    womanLeftX: 92,
-    womanRightX: 628,
+    womanMinY: 300,
+    womanMaxY: 760,
+    womanLeftX: 175,
+    womanRightX: 545,
     dialogMs: 1650,
   },
 } as const;
