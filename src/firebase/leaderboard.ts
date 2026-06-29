@@ -1,11 +1,10 @@
-﻿import {
+import {
+  addDoc,
   collection,
-  doc,
   getDocs,
   limit as queryLimit,
   orderBy,
   query,
-  runTransaction,
   serverTimestamp,
 } from "firebase/firestore";
 import { db, firebaseConfigError } from "./firebaseConfig";
@@ -16,25 +15,13 @@ export async function updateLeaderboard(result: GameRunResult) {
     throw new Error(firebaseConfigError ?? "Firestore no esta disponible.");
   }
 
-  const entryRef = doc(db, "leaderboard", result.uid);
-
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(entryRef);
-    const currentBest = snapshot.exists() ? Number(snapshot.data().bestScore ?? 0) : 0;
-
-    if (!snapshot.exists() || result.score > currentBest) {
-      transaction.set(
-        entryRef,
-        {
-          uid: result.uid,
-          displayName: result.displayName,
-          bestScore: result.score,
-          maxCombo: result.maxCombo,
-          carsDestroyed: result.carsDestroyed ?? null,
-          updatedAt: serverTimestamp(),
-        },
-      );
-    }
+  await addDoc(collection(db, "leaderboard"), {
+    uid: result.uid,
+    displayName: result.displayName,
+    bestScore: result.score,
+    maxCombo: result.maxCombo,
+    carsDestroyed: result.carsDestroyed ?? null,
+    updatedAt: serverTimestamp(),
   });
 }
 
@@ -55,6 +42,7 @@ export async function getTopLeaderboard(limit = 20): Promise<LeaderboardEntry[]>
     const data = entry.data();
 
     return {
+      id: entry.id,
       uid: String(data.uid ?? entry.id),
       displayName: String(data.displayName ?? "Jugador anonimo"),
       bestScore: Number(data.bestScore ?? 0),

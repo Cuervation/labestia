@@ -132,3 +132,8 @@
 - Verified current repo locally: typecheck/build pass, firebase.json serves dist with SPA rewrite, and this environment lacks Firebase CLI so real deploy must be run manually after firebase login + firebase use --add.
 
 - Gameplay visual pass: HUD restyled toward the mobile mock with black top bar/logo/timer/score/combo, street background gained cobblestone/vereda/arboles/details, and mobile touch buttons were restyled as circular arcade controls. Typecheck passed; visual smoke captured /play with Playwright.
+
+- Production polish: fixed mujer street event visibility by spawning it lower on the sidewalk and slightly increasing scale.
+- Production polish: moved the FIUUUU dialog to the player's front driver-window area and kept it following La Bestia while visible.
+- Production polish: compact ranking popup now shows only POS/JUGADOR/PUNTAJE, with button-like arcade styling and numeric columns using a legible font so scores render correctly.
+- Validation: npm run typecheck and npm run build passed; Playwright smoke verified /play, mujer visibility, FIUUUU bubble screenshot, and ranking popup score visibility.

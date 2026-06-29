@@ -1,6 +1,6 @@
-# Firebase Model — La Bestia
+# Firebase Model â€” La Bestia
 
-Firebase será usado para Auth, Firestore y Hosting.
+Firebase serÃ¡ usado para Auth, Firestore y Hosting.
 
 ## Colecciones previstas
 
@@ -21,7 +21,7 @@ Firebase será usado para Auth, Firestore y Hosting.
 - `durationSeconds`
 - `createdAt`
 
-### `leaderboard/{uid}`
+### `leaderboard/{entryId}`
 
 - `uid`
 - `displayName`
@@ -29,6 +29,8 @@ Firebase será usado para Auth, Firestore y Hosting.
 - `maxCombo`
 - `updatedAt`
 
+Cada partida guarda una entrada nueva, asÃ­ un mismo usuario puede aparecer varias veces.
+
 ## Regla inicial
 
-Guardar partida al terminar. Actualizar leaderboard solo si supera `bestScore`.
+Guardar partida al terminar. Agregar una entrada al leaderboard para que el ranking pueda mostrar varias partidas por usuario.

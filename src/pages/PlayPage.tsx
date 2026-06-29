@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { GameCanvas, GameOverPanel } from "../components";
+import { GameCanvas, GameOverPanel, RankingPopup } from "../components";
 import { isFirebaseConfigured, saveGameRun, updateLeaderboard } from "../firebase";
 import type { GameRunResult } from "../firebase";
 import { saveLocalScore } from "../storage/localScores";
@@ -12,6 +12,9 @@ type GameOverEventDetail = {
   durationSeconds?: number;
   missionsCompleted?: number;
   missionsTotal?: number;
+  bestiaActivations?: number;
+  bestComboLabel?: string;
+  endTitle?: string;
 };
 
 function dispatchPlayerControl(direction: -1 | 0 | 1) {
@@ -21,12 +24,16 @@ function dispatchPlayerControl(direction: -1 | 0 | 1) {
 export function PlayPage() {
   const user = useAuthStore((state) => state.user);
   const [gameKey, setGameKey] = useState(0);
+  const [rankingOpen, setRankingOpen] = useState(false);
   const [gameOverResult, setGameOverResult] = useState<{
     score: number;
     maxCombo: number;
     carsDestroyed?: number | null;
     missionsCompleted?: number;
     missionsTotal?: number;
+    bestiaActivations?: number;
+    bestComboLabel?: string;
+    endTitle?: string;
     message: string;
   } | null>(null);
 
@@ -42,6 +49,19 @@ export function PlayPage() {
       const durationSeconds = Number(customEvent.detail?.durationSeconds ?? 90);
       const missionsCompleted = Number(customEvent.detail?.missionsCompleted ?? 0);
       const missionsTotal = Number(customEvent.detail?.missionsTotal ?? 0);
+      const bestiaActivations = Number(customEvent.detail?.bestiaActivations ?? 0);
+      const bestComboLabel = customEvent.detail?.bestComboLabel ?? "";
+      const endTitle = customEvent.detail?.endTitle ?? "Destructor Callejero";
+      const gameOverStats = {
+        score,
+        maxCombo,
+        carsDestroyed,
+        missionsCompleted,
+        missionsTotal,
+        bestiaActivations,
+        bestComboLabel,
+        endTitle,
+      };
 
       if (!isFirebaseConfigured || !user) {
         saveLocalScore({
@@ -53,11 +73,7 @@ export function PlayPage() {
         });
 
         setGameOverResult({
-          score,
-          maxCombo,
-          carsDestroyed,
-          missionsCompleted,
-          missionsTotal,
+          ...gameOverStats,
           message: isFirebaseConfigured
             ? "Partida guardada en este navegador. Inicia sesion para ranking global."
             : "Partida guardada en este navegador. Firebase todavia no esta configurado.",
@@ -76,16 +92,8 @@ export function PlayPage() {
 
       try {
         await saveGameRun(result);
-        await updateLeaderboard(result);
-        setGameOverResult({
-          score,
-          maxCombo,
-          carsDestroyed,
-          missionsCompleted,
-          missionsTotal,
-          message: "Partida guardada y ranking actualizado.",
-        });
-      } catch {
+      } catch (unknownError) {
+        console.error("No se pudo guardar la partida en scores.", unknownError);
         saveLocalScore({
           displayName: user.displayName,
           score,
@@ -95,12 +103,31 @@ export function PlayPage() {
         });
 
         setGameOverResult({
+          ...gameOverStats,
+          message: "No se pudo guardar la partida en Firebase. Dejamos una copia local en este navegador.",
+        });
+        return;
+      }
+
+      try {
+        await updateLeaderboard(result);
+        setGameOverResult({
+          ...gameOverStats,
+          message: "Partida guardada y ranking actualizado.",
+        });
+      } catch (unknownError) {
+        console.error("No se pudo actualizar leaderboard.", unknownError);
+        saveLocalScore({
+          displayName: user.displayName,
           score,
           maxCombo,
           carsDestroyed,
-          missionsCompleted,
-          missionsTotal,
-          message: "No se pudo guardar en Firebase. Dejamos una copia local en este navegador.",
+          durationSeconds,
+        });
+
+        setGameOverResult({
+          ...gameOverStats,
+          message: "La partida se guardo, pero no se pudo actualizar el ranking global. Dejamos una copia local.",
         });
       }
     };
@@ -148,11 +175,14 @@ export function PlayPage() {
               {...gameOverResult}
               onRestart={() => {
                 setGameOverResult(null);
+                setRankingOpen(false);
                 setGameKey((currentKey) => currentKey + 1);
               }}
+              onShowRanking={() => setRankingOpen(true)}
             />
           </div>
         ) : null}
+        {rankingOpen ? <RankingPopup onClose={() => setRankingOpen(false)} /> : null}
       </div>
     </section>
   );

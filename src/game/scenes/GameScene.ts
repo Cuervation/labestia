@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { GAME_BALANCE } from "../config/balance";
-import { STREET_ASSETS } from "../config/assets";
+import { ASSET_KEYS, STREET_ASSETS } from "../config/assets";
 import { AudioSystem, EffectsSystem, GameStateSystem, HudSystem, MissionSystem, PlayerSystem, RiderSystem, ScoringSystem, TrafficSystem } from "../systems";
 import type { VehicleKind } from "../types";
 
@@ -18,6 +18,12 @@ export class GameScene extends Phaser.Scene {
   private smokeAccumulatorMs = 0;
   private simulatedTime = 0;
   private roadTiles: Phaser.GameObjects.Image[] = [];
+  private streetDecorations: Phaser.GameObjects.Image[] = [];
+  private whistleDialog?: {
+    bubble: Phaser.GameObjects.Graphics;
+    text: Phaser.GameObjects.Text;
+    expiresAt: number;
+  };
 
   constructor() {
     super("GameScene");
@@ -103,12 +109,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.scoring.update(delta);
+    this.missions.update(this.scoring.elapsedSeconds * 1000);
     this.updateRoad(delta);
     this.player.update(time, this.scoring.getPlayerSpeedMultiplier());
     this.traffic.update(time, this.scoring.getDifficulty());
     this.riders.update(time);
     this.hud.update(this.scoring, this.missions.getSnapshots());
     this.effects.updateBestiaAura(this.player.sprite, this.scoring.bestiaModeActive);
+    this.updateWhistleDialog(time);
     this.emitSmoke(delta);
 
     if (this.scoring.isFinished()) {
@@ -122,16 +130,24 @@ export class GameScene extends Phaser.Scene {
     }
 
     const kind = this.traffic.getVehicleKind(vehicle);
-    const hit = this.scoring.registerHit(kind);
+    const carModel = this.traffic.getCarModel(vehicle);
+    const hit = this.scoring.registerHit(kind, carModel, vehicle.y, this.scale.height);
     const x = vehicle.x;
     const y = vehicle.y;
     const isPolice = kind === "policeCar";
     const isHighCombo = hit.comboMultiplier >= GAME_BALANCE.effects.highComboThreshold;
 
     this.traffic.destroyVehicle(vehicle);
-    const completedMissions = this.missions?.registerHit(hit) ?? [];
+    const completedMissions = this.missions?.registerHit(hit, this.scoring) ?? [];
     completedMissions.forEach((mission) => {
       this.scoring?.addBonus(mission.bonus);
+      if (mission.bestiaCharge) {
+        const bestiaActivated = this.scoring?.addBestiaChargeBonus(mission.bestiaCharge);
+        if (bestiaActivated && this.player) {
+          this.audio?.playBestiaMode();
+          this.effects?.bestiaBurst(this.player.sprite.x, this.player.sprite.y);
+        }
+      }
     });
     if (completedMissions.length > 0) {
       const bonusTotal = completedMissions.reduce((total, mission) => total + mission.bonus, 0);
@@ -147,9 +163,35 @@ export class GameScene extends Phaser.Scene {
     this.effects.impact(kind, hit.comboMultiplier);
     this.effects.sparks(x, y, kind, hit.comboMultiplier);
     this.effects.explosion(x, y, hit.comboMultiplier);
-    this.effects.floatingText(x, y - 34, `+${hit.points}`, {
+    const baseLabel = isPolice
+      ? hit.bestiaModeActive
+        ? "POLICÍA DESTRUIDA +1000"
+        : "POLICÍA +250"
+      : `${this.formatCarModel(hit.carModel)} +${hit.points}`;
+
+    this.effects.floatingText(x, y - 34, baseLabel, {
       color: isPolice ? "#60a5fa" : isHighCombo ? "#facc15" : "#fff7ed",
       fontSize: isHighCombo ? 52 : 42,
+    });
+
+    if (hit.bestiaChargeGain && hit.carModel === "eco") {
+      this.effects.floatingText(x, y - 82, `BESTIA +${hit.bestiaChargeGain}%`, {
+        color: "#facc15",
+        fontSize: 34,
+        rise: 82,
+      });
+    }
+
+    hit.bonusLabels.forEach((label, index) => {
+      const normalizedLabel = label.toUpperCase();
+      const isSequenceCombo = normalizedLabel.startsWith("COMBO ");
+      const labelX = isSequenceCombo ? this.scale.width / 2 : x;
+      const labelY = isSequenceCombo ? 250 + index * 50 : y - 84 - index * 42;
+      this.effects?.floatingText(labelX, labelY, normalizedLabel, {
+        color: normalizedLabel.includes("POLICIA") ? "#93c5fd" : isSequenceCombo ? "#facc15" : "#86efac",
+        fontSize: isSequenceCombo ? 46 : 32,
+        rise: isSequenceCombo ? 100 : 86,
+      });
     });
 
     if (hit.comboMultiplier >= 2) {
@@ -165,9 +207,9 @@ export class GameScene extends Phaser.Scene {
       this.effects.bestiaBurst(this.player.sprite.x, this.player.sprite.y);
     }
 
-    if (kind === "policeCar") {
+    if (kind === "policeCar" && hit.policePunished) {
       this.player.applyPoliceTurnLock(this.simulatedTime);
-      this.effects.floatingText(this.player.sprite.x, this.player.sprite.y - 80, "POLICIA: SIN GIRO", {
+      this.effects.floatingText(this.player.sprite.x, this.player.sprite.y - 80, "SIN GIRO", {
         color: "#93c5fd",
         fontSize: 34,
       });
@@ -180,21 +222,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     const rider = this.riders.getRider(riderSprite);
-    const points = GAME_BALANCE.riders.basePoints * GAME_BALANCE.riders.scoreMultiplier;
     const x = riderSprite.x;
     const y = riderSprite.y;
 
     this.riders.destroyRider(riderSprite);
-    this.scoring.addBonus(points);
-    this.effects.floatingText(x, y - 34, `${rider.label} x${GAME_BALANCE.riders.scoreMultiplier}`, {
+    if (rider.kind === "gaston") {
+      this.scoring.activateRappi();
+    } else {
+      this.scoring.activatePedidosYa();
+    }
+    this.missions?.registerRider(rider.kind);
+    const riderLabel = rider.kind === "gaston" ? "RAPPI x2 8s" : rider.label;
+    this.effects.floatingText(x, y - 34, riderLabel, {
       color: rider.kind === "osky" ? "#facc15" : "#fb7185",
       fontSize: 34,
       rise: 78,
-    });
-    this.effects.floatingText(x, y - 76, `+${points}`, {
-      color: "#86efac",
-      fontSize: 44,
-      rise: 90,
     });
   }
 
@@ -238,6 +280,9 @@ export class GameScene extends Phaser.Scene {
           maxCombo: this.scoring.maxCombo,
           carsDestroyed: this.scoring.autosDestroyed,
           durationSeconds: GAME_BALANCE.durationSeconds,
+          bestiaActivations: this.scoring.bestiaActivations,
+          bestComboLabel: this.scoring.bestComboLabel,
+          endTitle: this.missions?.getEndTitle(this.scoring) ?? "Destructor Callejero",
           missionsCompleted: this.missions?.getCompletedCount() ?? 0,
           missionsTotal: this.missions?.getTotalCount() ?? 0,
         },
@@ -245,7 +290,19 @@ export class GameScene extends Phaser.Scene {
     );
 
     const missionSummary = `${this.missions?.getCompletedCount() ?? 0}/${this.missions?.getTotalCount() ?? 0}`;
-    this.effects.gameOverOverlay(this.scoring.score, this.scoring.maxCombo, this.scoring.autosDestroyed, missionSummary);
+    this.effects.gameOverOverlay(
+      this.scoring.score,
+      this.scoring.maxCombo,
+      this.scoring.autosDestroyed,
+      missionSummary,
+      this.scoring.bestComboLabel,
+      this.scoring.bestiaActivations,
+      this.missions?.getEndTitle(this.scoring),
+    );
+  }
+
+  private formatCarModel(model?: string) {
+    return (model ?? "auto").toUpperCase();
   }
 
   private drawRoad() {
@@ -257,11 +314,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     let y = 0;
-    STREET_ASSETS.forEach((asset) => {
+    STREET_ASSETS.forEach((asset, index) => {
       const tile = this.add.image(this.scale.width / 2, y, asset.key).setOrigin(0.5, 0).setDepth(0);
       const source = this.textures.get(asset.key).getSourceImage() as HTMLImageElement;
       const scale = this.scale.width / source.width;
       tile.setDisplaySize(this.scale.width, source.height * scale);
+      tile.setData("streetIndex", index);
       this.roadTiles.push(tile);
       y += tile.displayHeight;
     });
@@ -279,8 +337,131 @@ export class GameScene extends Phaser.Scene {
       tile.y += speed;
       if (tile.y >= this.scale.height) {
         tile.y = topY() - tile.displayHeight;
+        if (tile.getData("streetIndex") === STREET_ASSETS.length - 1) {
+          this.spawnWomanStreetEvent();
+        }
       }
     });
+
+    this.streetDecorations.forEach((decoration) => {
+      decoration.y += speed;
+      if (decoration.y > this.scale.height + 120) {
+        decoration.destroy();
+      }
+    });
+    this.streetDecorations = this.streetDecorations.filter((decoration) => decoration.active);
+  }
+
+  private spawnWomanStreetEvent() {
+    if (!this.textures.exists(ASSET_KEYS.woman)) {
+      return;
+    }
+
+    const side = Phaser.Math.Between(0, 1) === 0 ? "left" : "right";
+    const x = side === "left" ? GAME_BALANCE.streetEvents.womanLeftX : GAME_BALANCE.streetEvents.womanRightX;
+    const woman = this.add
+      .image(x, GAME_BALANCE.streetEvents.womanY, ASSET_KEYS.woman)
+      .setScale(GAME_BALANCE.streetEvents.womanScale)
+      .setDepth(5);
+    this.tweens.add({
+      targets: woman,
+      y: woman.y + 6,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    this.streetDecorations.push(woman);
+    this.showWhistleDialog();
+  }
+
+  private showWhistleDialog() {
+    const player = this.player?.sprite;
+    if (!player) {
+      return;
+    }
+
+    this.clearWhistleDialog();
+    const { x, y } = this.getWhistleAnchor();
+    const bubble = this.add.graphics().setDepth(121);
+    const text = this.add
+      .text(x, y - 4, "FIUUUU!!\nFIUUUU!", {
+        align: "center",
+        color: "#111111",
+        fontFamily: "Impact, Arial Black, sans-serif",
+        fontSize: "16px",
+        fontStyle: "italic",
+        stroke: "#fff7ed",
+        strokeThickness: 1,
+      })
+      .setOrigin(0.5)
+      .setDepth(122);
+
+    this.redrawWhistleDialog(bubble, x, y);
+    this.whistleDialog = {
+      bubble,
+      text,
+      expiresAt: this.simulatedTime + GAME_BALANCE.streetEvents.dialogMs,
+    };
+
+    this.tweens.add({
+      targets: [bubble, text],
+      alpha: 0,
+      delay: GAME_BALANCE.streetEvents.dialogMs,
+      duration: 280,
+      onComplete: () => {
+        bubble.destroy();
+        text.destroy();
+        if (this.whistleDialog?.bubble === bubble) {
+          this.whistleDialog = undefined;
+        }
+      },
+    });
+  }
+
+  private updateWhistleDialog(time: number) {
+    if (!this.whistleDialog || !this.player) {
+      return;
+    }
+
+    if (time >= this.whistleDialog.expiresAt) {
+      this.clearWhistleDialog();
+      return;
+    }
+
+    const { x, y } = this.getWhistleAnchor();
+    this.redrawWhistleDialog(this.whistleDialog.bubble, x, y);
+    this.whistleDialog.text.setPosition(x, y - 4);
+  }
+
+  private getWhistleAnchor() {
+    const player = this.player?.sprite;
+    const facing = this.player?.getFacing?.() ?? "center";
+    const offsetX = facing === "left" ? -42 : facing === "right" ? 42 : 46;
+    const x = player ? Phaser.Math.Clamp(player.x + offsetX, 96, this.scale.width - 96) : this.scale.width / 2;
+    const y = player ? Math.max(150, player.y - 122) : 240;
+    return { x, y };
+  }
+
+  private redrawWhistleDialog(bubble: Phaser.GameObjects.Graphics, x: number, y: number) {
+    bubble.clear();
+    bubble.fillStyle(0xffffff, 0.98);
+    bubble.fillRoundedRect(x - 72, y - 24, 144, 44, 12);
+    bubble.lineStyle(3, 0x111111, 0.9);
+    bubble.strokeRoundedRect(x - 72, y - 24, 144, 44, 12);
+    bubble.fillTriangle(x - 16, y + 18, x + 12, y + 18, x - 2, y + 34);
+    bubble.lineStyle(3, 0x111111, 0.9);
+    bubble.strokeTriangle(x - 16, y + 18, x + 12, y + 18, x - 2, y + 34);
+  }
+
+  private clearWhistleDialog() {
+    if (!this.whistleDialog) {
+      return;
+    }
+
+    this.whistleDialog.bubble.destroy();
+    this.whistleDialog.text.destroy();
+    this.whistleDialog = undefined;
   }
 
   private renderGameToText() {
@@ -289,6 +470,7 @@ export class GameScene extends Phaser.Scene {
       const sprite = child as Phaser.Physics.Arcade.Sprite;
       return {
         kind: sprite.getData("vehicleKind") as VehicleKind,
+        model: sprite.getData("carModel") as string | undefined,
         x: Math.round(sprite.x),
         y: Math.round(sprite.y),
       };
@@ -321,6 +503,18 @@ export class GameScene extends Phaser.Scene {
           y: Math.round(sprite.y),
         };
       }) ?? [],
+      streetDecorations: this.streetDecorations.map((decoration) => ({
+        texture: decoration.texture.key,
+        x: Math.round(decoration.x),
+        y: Math.round(decoration.y),
+      })),
+      whistleDialog: this.whistleDialog
+        ? {
+            x: Math.round(this.whistleDialog.text.x),
+            y: Math.round(this.whistleDialog.text.y),
+            text: this.whistleDialog.text.text,
+          }
+        : null,
     });
   }
 

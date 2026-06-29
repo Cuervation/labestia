@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { RankingPopup } from "../components";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthStore } from "../store";
 
@@ -8,6 +9,7 @@ export function HomePage() {
   const soundEnabledRef = useRef(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [rankingOpen, setRankingOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
   const loading = useAuthStore((state) => state.loading);
   const statusMessage = useAuthStore((state) => state.statusMessage);
@@ -95,9 +97,16 @@ export function HomePage() {
           </button>
           {menuOpen ? (
             <div className="cover-menu-panel">
-              <a className="cover-menu-link cover-menu-link--primary" href="/ranking" onClick={() => setMenuOpen(false)}>
+              <button
+                className="cover-menu-link cover-menu-link--primary"
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setRankingOpen(true);
+                }}
+              >
                 Ranking
-              </a>
+              </button>
               <button
                 className="cover-menu-link cover-menu-link--danger"
                 type="button"
@@ -163,6 +172,7 @@ export function HomePage() {
         ) : (
           <a className="cover-play-button" href="/play">JUGAR</a>
         )}
+        {rankingOpen ? <RankingPopup onClose={() => setRankingOpen(false)} /> : null}
       </div>
     </section>
   );

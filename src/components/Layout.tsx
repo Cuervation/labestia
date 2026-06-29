@@ -8,7 +8,6 @@ export function Layout({ children }: PropsWithChildren) {
         <a className="brand" href="/">La Bestia</a>
         <nav className="nav-links" aria-label="Navegacion principal">
           <a href="/play">Jugar</a>
-          <a href="/ranking">Ranking</a>
           <a href="/profile">Perfil</a>
         </nav>
         <div className="topbar-actions">

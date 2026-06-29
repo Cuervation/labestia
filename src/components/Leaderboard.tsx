@@ -12,7 +12,13 @@ type LeaderboardRow = {
   carsDestroyed?: number | null;
 };
 
-export function Leaderboard() {
+type LeaderboardProps = {
+  limit?: number;
+  compact?: boolean;
+  showStatus?: boolean;
+};
+
+export function Leaderboard({ limit = 20, compact = false, showStatus = true }: LeaderboardProps) {
   const [entries, setEntries] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +28,7 @@ export function Leaderboard() {
     let cancelled = false;
 
     if (!isFirebaseConfigured) {
-      setEntries(getLocalLeaderboard(20).map(mapLocalEntry));
+      setEntries(getLocalLeaderboard(limit).map(mapLocalEntry));
       setMode("local");
       setError(null);
       setLoading(false);
@@ -31,12 +37,12 @@ export function Leaderboard() {
       };
     }
 
-    void getTopLeaderboard(20)
+    void getTopLeaderboard(limit)
       .then((results) => {
         if (!cancelled) {
           setEntries(
             results.map((entry) => ({
-              id: entry.uid,
+              id: entry.id,
               displayName: entry.displayName,
               bestScore: entry.bestScore,
               maxCombo: entry.maxCombo,
@@ -69,7 +75,7 @@ export function Leaderboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [limit]);
 
   if (loading) {
     return (
@@ -98,19 +104,21 @@ export function Leaderboard() {
   }
 
   return (
-    <div className="table-shell panel">
-      <div className="leaderboard-status">
-        <span className="mode-badge">{getModeLabel(mode)}</span>
-        {mode !== "global" ? <p>Este ranking vive solo en este navegador.</p> : null}
-      </div>
+    <div className={`table-shell panel${compact ? " table-shell--compact" : ""}`}>
+      {showStatus ? (
+        <div className="leaderboard-status">
+          <span className="mode-badge">{getModeLabel(mode)}</span>
+          {mode !== "global" ? <p>Este ranking vive solo en este navegador.</p> : null}
+        </div>
+      ) : null}
       <table className="arcade-table">
         <thead>
           <tr>
             <th>Pos.</th>
             <th>Jugador</th>
             <th>Puntaje</th>
-            <th>Combo max</th>
-            <th>Autos</th>
+            {!compact ? <th>Combo max</th> : null}
+            {!compact ? <th>Autos</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -119,8 +127,8 @@ export function Leaderboard() {
               <td>{index + 1}</td>
               <td>{entry.displayName}</td>
               <td>{entry.bestScore}</td>
-              <td>x{entry.maxCombo}</td>
-              <td>{entry.carsDestroyed ?? "-"}</td>
+              {!compact ? <td>x{entry.maxCombo}</td> : null}
+              {!compact ? <td>{entry.carsDestroyed ?? "-"}</td> : null}
             </tr>
           ))}
         </tbody>

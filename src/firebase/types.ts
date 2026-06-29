@@ -14,6 +14,7 @@ export type GameRunResult = {
 };
 
 export type LeaderboardEntry = {
+  id: string;
   uid: string;
   displayName: string;
   bestScore: number;

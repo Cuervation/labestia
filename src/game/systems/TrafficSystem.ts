@@ -1,13 +1,14 @@
 ﻿import Phaser from "phaser";
 import { ASSET_KEYS } from "../config/assets";
 import { GAME_BALANCE, type DifficultyLevel } from "../config/balance";
-import type { VehicleKind } from "../types";
+import type { CarModel, VehicleKind } from "../types";
 
 type SpawnConfig = {
   spawnEveryMs: number;
   minSpeed: number;
   maxSpeed: number;
   policeChance: number;
+  modelWeights: Record<CarModel, number>;
 };
 
 const VEHICLE_TEXTURES: Record<VehicleKind, string> = {
@@ -17,7 +18,15 @@ const VEHICLE_TEXTURES: Record<VehicleKind, string> = {
   policeCar: ASSET_KEYS.policeCar,
 };
 
-const COMMON_CAR_TEXTURES = [ASSET_KEYS.chery, ASSET_KEYS.eco, ASSET_KEYS.focus, ASSET_KEYS.meriva, ASSET_KEYS.renault];
+const CAR_MODEL_TEXTURES: Record<CarModel, string> = {
+  peugeot: ASSET_KEYS.peugeot,
+  chery: ASSET_KEYS.chery,
+  meriva: ASSET_KEYS.meriva,
+  focus: ASSET_KEYS.focus,
+  eco: ASSET_KEYS.eco,
+};
+
+const CAR_MODELS = Object.keys(CAR_MODEL_TEXTURES) as CarModel[];
 
 const FALLBACK_COLORS: Record<VehicleKind, number> = {
   normalCar: 0x94a3b8,
@@ -72,15 +81,25 @@ export class TrafficSystem {
     return sprite.getData("vehicleKind") as VehicleKind;
   }
 
+  getCarModel(sprite: Phaser.Physics.Arcade.Sprite): CarModel | undefined {
+    return sprite.getData("carModel") as CarModel | undefined;
+  }
+
   private spawnVehicle(config: SpawnConfig) {
     const kind = this.pickVehicleKind(config.policeChance);
-    const x = Phaser.Utils.Array.GetRandom([...GAME_BALANCE.traffic.lanes]);
+    const x = this.pickSafeLane();
+    if (x === null) {
+      return;
+    }
+
     const y = -90;
-    const texture = kind === "policeCar" ? ASSET_KEYS.policeCar : Phaser.Utils.Array.GetRandom(COMMON_CAR_TEXTURES);
+    const carModel = kind === "policeCar" ? undefined : this.pickCarModel(config.modelWeights);
+    const texture = kind === "policeCar" ? ASSET_KEYS.policeCar : CAR_MODEL_TEXTURES[carModel ?? "peugeot"];
+    const speed = this.getSafeSpeed(x, this.getModelSpeed(config, carModel));
     const sprite = this.group.create(x, y, texture) as Phaser.Physics.Arcade.Sprite;
-    const speed = Phaser.Math.Between(config.minSpeed, config.maxSpeed);
 
     sprite.setData("vehicleKind", kind);
+    sprite.setData("carModel", carModel);
     sprite.setData("vehicleTexture", texture);
     this.scaleVehicle(sprite, kind);
     sprite.setVelocityY(speed);
@@ -97,12 +116,71 @@ export class TrafficSystem {
     );
   }
 
+  private pickSafeLane() {
+    const lanes = Phaser.Utils.Array.Shuffle([...GAME_BALANCE.traffic.lanes]);
+    const minGap = GAME_BALANCE.traffic.minVehicleGap;
+
+    return lanes.find((lane) => {
+      const closestVehicle = this.getClosestVehicleInLane(lane);
+      return !closestVehicle || closestVehicle.y > minGap;
+    }) ?? null;
+  }
+
+  private getSafeSpeed(lane: number, speed: number) {
+    const closestVehicle = this.getClosestVehicleInLane(lane);
+    if (!closestVehicle) {
+      return speed;
+    }
+
+    return Math.min(speed, Math.max(0, closestVehicle.body?.velocity.y ?? speed));
+  }
+
+  private getClosestVehicleInLane(lane: number): Phaser.Physics.Arcade.Sprite | null {
+    let closest: Phaser.Physics.Arcade.Sprite | null = null;
+
+    this.group.getChildren().forEach((child) => {
+      const sprite = child as Phaser.Physics.Arcade.Sprite;
+      if (!sprite.active || Math.abs(sprite.x - lane) > 2 || sprite.y < -120) {
+        return;
+      }
+
+      if (!closest || sprite.y < closest.y) {
+        closest = sprite;
+      }
+    });
+
+    return closest;
+  }
+
   private pickVehicleKind(policeChance: number): VehicleKind {
     if (Math.random() < policeChance) {
       return "policeCar";
     }
 
     return "normalCar";
+  }
+
+  private pickCarModel(weights: Record<CarModel, number>) {
+    const total = CAR_MODELS.reduce((sum, model) => sum + weights[model], 0);
+    let roll = Math.random() * total;
+
+    for (const model of CAR_MODELS) {
+      roll -= weights[model];
+      if (roll <= 0) {
+        return model;
+      }
+    }
+
+    return "peugeot";
+  }
+
+  private getModelSpeed(config: SpawnConfig, carModel?: CarModel) {
+    const speed = Phaser.Math.Between(config.minSpeed, config.maxSpeed);
+    if (carModel !== "focus") {
+      return speed;
+    }
+
+    return Math.round(speed * GAME_BALANCE.traffic.focusSpeedMultiplier);
   }
 
   private scaleVehicle(sprite: Phaser.Physics.Arcade.Sprite, kind: VehicleKind) {
@@ -112,7 +190,7 @@ export class TrafficSystem {
   }
 
   private ensureVehicleTextures() {
-    COMMON_CAR_TEXTURES.forEach((key) => {
+    Object.values(CAR_MODEL_TEXTURES).forEach((key) => {
       if (this.scene.textures.exists(key)) {
         return;
       }

@@ -1,14 +1,12 @@
 ﻿import { useEffect } from "react";
 import { Layout } from "../components";
-import { HomePage, PlayPage, ProfilePage, RankingPage } from "../pages";
+import { HomePage, PlayPage, ProfilePage } from "../pages";
 import { startAuthStoreSync } from "../store";
 
 function getCurrentPage() {
   switch (window.location.pathname) {
     case "/play":
       return <PlayPage />;
-    case "/ranking":
-      return <RankingPage />;
     case "/profile":
       return <ProfilePage />;
     case "/":

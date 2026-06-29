@@ -7,6 +7,7 @@ export const ASSET_KEYS = {
   eco: "eco",
   focus: "focus",
   meriva: "meriva",
+  peugeot: "peugeot",
   renault: "renault",
   normalCar: "normal-car",
   taxi: "taxi",
@@ -15,6 +16,7 @@ export const ASSET_KEYS = {
   explosion: "explosion",
   riderOsky: "rider-osky",
   riderGaston: "rider-gaston",
+  woman: "woman",
 } as const;
 
 export type AssetKey = (typeof ASSET_KEYS)[keyof typeof ASSET_KEYS];
@@ -63,6 +65,10 @@ export const ASSET_MANIFEST = [
     path: "/assets/meriva.png",
   },
   {
+    key: ASSET_KEYS.peugeot,
+    path: "/assets/peugeot.png",
+  },
+  {
     key: ASSET_KEYS.renault,
     path: "/assets/renault.png",
   },
@@ -93,6 +99,10 @@ export const ASSET_MANIFEST = [
   {
     key: ASSET_KEYS.riderGaston,
     path: "/assets/rider_gaston.png",
+  },
+  {
+    key: ASSET_KEYS.woman,
+    path: "/assets/mujer.png",
   },
   ...STREET_ASSETS,
 ] as const;

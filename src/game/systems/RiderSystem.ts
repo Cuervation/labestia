@@ -5,8 +5,8 @@ import { GAME_BALANCE } from "../config/balance";
 export type RiderKind = "osky" | "gaston";
 
 const RIDERS: Array<{ kind: RiderKind; texture: string; label: string }> = [
-  { kind: "osky", texture: ASSET_KEYS.riderOsky, label: "Bonus Pedidos Ya" },
-  { kind: "gaston", texture: ASSET_KEYS.riderGaston, label: "Bonus Rappi" },
+  { kind: "osky", texture: ASSET_KEYS.riderOsky, label: "PEDIDOSYA COMBO +50%" },
+  { kind: "gaston", texture: ASSET_KEYS.riderGaston, label: "RAPPI x2" },
 ];
 
 export class RiderSystem {

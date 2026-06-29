@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import { ScoringSystem } from "./ScoringSystem";
 import type { MissionSnapshot } from "../types";
 
@@ -10,6 +10,9 @@ export class HudSystem {
   private readonly timerText: HudText;
   private readonly comboText: HudText;
   private readonly bestiaText: HudText;
+  private readonly bestiaChargeText: HudText;
+  private readonly lastComboText: HudText;
+  private readonly riderText: HudText;
   private readonly difficultyText: HudText;
   private readonly hintText: HudText;
   private readonly bestiaPanel: Phaser.GameObjects.Graphics;
@@ -30,6 +33,9 @@ export class HudSystem {
     this.scoreText = scene.add.text(scene.scale.width - 116, 42, "0", this.style("#fff7ed", 36)).setOrigin(1, 0);
     this.comboText = scene.add.text(scene.scale.width - 28, 168, "x1\nCOMBO", this.comboStyle()).setOrigin(1, 0);
     this.bestiaText = scene.add.text(scene.scale.width / 2, 82, "", this.style("#facc15", 28)).setOrigin(0.5, 0);
+    this.bestiaChargeText = scene.add.text(scene.scale.width / 2, 112, "BESTIA 0%", this.style("#facc15", 18)).setOrigin(0.5, 0);
+    this.lastComboText = scene.add.text(scene.scale.width / 2, 142, "", this.style("#86efac", 20)).setOrigin(0.5, 0);
+    this.riderText = scene.add.text(scene.scale.width / 2, 172, "", this.style("#fb7185", 20)).setOrigin(0.5, 0);
     this.difficultyText = scene.add.text(scene.scale.width - 28, 96, "NIVEL EASY", this.style("#38bdf8", 18)).setOrigin(1, 0);
     this.hintText = scene.add
       .text(scene.scale.width / 2, 304, "CHOCA TODO EN 90 SEGUNDOS", {
@@ -48,6 +54,9 @@ export class HudSystem {
       this.timerText,
       this.comboText,
       this.bestiaText,
+      this.bestiaChargeText,
+      this.lastComboText,
+      this.riderText,
       this.difficultyText,
       this.hintText,
       ...this.missionTexts,
@@ -70,12 +79,15 @@ export class HudSystem {
     this.timerText.setText(this.formatTime(scoring.remainingSeconds));
     this.comboText.setText(`x${Math.max(scoring.comboCount, 1)}\nCOMBO`);
     this.difficultyText.setText(`PUNTAJE · NIVEL ${scoring.getDifficulty().toUpperCase()}`);
+    this.lastComboText.setText(scoring.lastComboLabel);
+    this.riderText.setText(scoring.activeRiderLabel);
     this.timerText.setColor(scoring.remainingSeconds <= 10 ? "#ef4444" : "#facc15");
     this.updateMissions(missions);
 
     if (scoring.bestiaModeActive) {
       this.drawBestiaPanel(this.bestiaPanel);
-      this.bestiaText.setText(`BESTIA MODE! ${scoring.getBestiaRemainingSeconds()}s`);
+      this.bestiaText.setText(`BESTIA ${scoring.getBestiaRemainingSeconds()}s`);
+      this.bestiaChargeText.setText("x2 ROMPE TODO");
       this.bestiaText.setScale(1 + Math.sin(Date.now() / 90) * 0.08);
       this.comboText.setColor("#facc15");
       return;
@@ -83,10 +95,10 @@ export class HudSystem {
 
     this.bestiaPanel.clear();
     this.bestiaText.setText("");
+    this.bestiaChargeText.setText(`BESTIA ${Math.round(scoring.getBestiaChargeRatio() * 100)}%`);
     this.bestiaText.setScale(1);
     this.comboText.setColor("#fecaca");
   }
-
   private style(color: string, fontSize: number): Phaser.Types.GameObjects.Text.TextStyle {
     return {
       color,
@@ -171,9 +183,10 @@ export class HudSystem {
         return;
       }
 
-      const icon = mission.completed ? "★" : index === 1 ? "✦" : "★";
+      const icon = mission.isFlash ? "⚡" : mission.completed ? "★" : index === 1 ? "✦" : "★";
       text.setColor(mission.completed ? "#86efac" : "#fff7ed");
-      text.setText(`${icon} ${mission.label} ${mission.progress}/${mission.target}`);
+      const timer = mission.isFlash && typeof mission.remainingSeconds === "number" ? ` ${mission.remainingSeconds}s` : "";
+      text.setText(`${icon} ${mission.label} ${mission.progress}/${mission.target}${timer}`);
     });
   }
 
@@ -193,3 +206,4 @@ export class HudSystem {
     graphics.strokeRoundedRect(centerX - 210, 10, 420, 64, 18);
   }
 }
+

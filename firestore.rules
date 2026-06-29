@@ -47,7 +47,7 @@ service cloud.firestore {
         && request.resource.data.score is number
         && request.resource.data.score >= 0
         && request.resource.data.maxCombo is number
-        && request.resource.data.maxCombo >= 1
+        && request.resource.data.maxCombo >= 0
         && isNumberOrNull(request.resource.data.carsDestroyed)
         && (request.resource.data.carsDestroyed == null || request.resource.data.carsDestroyed >= 0)
         && request.resource.data.durationSeconds is number
@@ -56,7 +56,7 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
     }
 
-    function validLeaderboard(uid) {
+    function validLeaderboardEntry() {
       return request.resource.data.keys().hasOnly([
           'uid',
           'displayName',
@@ -65,12 +65,12 @@ service cloud.firestore {
           'carsDestroyed',
           'updatedAt'
         ])
-        && request.resource.data.uid == uid
+        && request.resource.data.uid == request.auth.uid
         && request.resource.data.displayName is string
         && request.resource.data.bestScore is number
         && request.resource.data.bestScore >= 0
         && request.resource.data.maxCombo is number
-        && request.resource.data.maxCombo >= 1
+        && request.resource.data.maxCombo >= 0
         && isNumberOrNull(request.resource.data.carsDestroyed)
         && (request.resource.data.carsDestroyed == null || request.resource.data.carsDestroyed >= 0)
         && request.resource.data.updatedAt == request.time;
@@ -92,13 +92,10 @@ service cloud.firestore {
         && validScore();
     }
 
-    match /leaderboard/{uid} {
+    match /leaderboard/{entryId} {
       allow read: if true;
-      allow create: if isOwner(uid)
-        && validLeaderboard(uid);
-      allow update: if isOwner(uid)
-        && validLeaderboard(uid)
-        && request.resource.data.bestScore >= resource.data.bestScore;
+      allow create: if isSignedIn()
+        && validLeaderboardEntry();
     }
   }
 }

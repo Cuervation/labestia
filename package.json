@@ -8,9 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "deploy": "firebase deploy",
-    "deploy:rules": "firebase deploy --only firestore:rules",
-    "deploy:hosting": "firebase deploy --only hosting"
+    "deploy": "npm run build && npx --yes firebase-tools@15.22.3 deploy --project la-bestia-2026",
+    "deploy:rules": "npx --yes firebase-tools@15.22.3 deploy --only firestore:rules --project la-bestia-2026",
+    "deploy:hosting": "npm run build && npx --yes firebase-tools@15.22.3 deploy --only hosting --project la-bestia-2026"
   },
   "dependencies": {
     "firebase": "^11.0.0",

@@ -145,17 +145,31 @@ export class EffectsSystem {
       })
       .setOrigin(0.5)
       .setDepth(120);
+    const subtitle = this.scene.add
+      .text(this.scene.scale.width / 2, 212, "ROMPE TODO x2", {
+        color: "#fff7ed",
+        fontFamily: "Arial, sans-serif",
+        fontSize: "36px",
+        fontStyle: "bold",
+        stroke: "#111111",
+        strokeThickness: 7,
+      })
+      .setOrigin(0.5)
+      .setDepth(120);
     const ring = this.scene.add.circle(x, y, 76, 0xffffff, 0).setStrokeStyle(8, 0xfacc15, 0.92).setDepth(32);
 
-    this.bestiaBurstObjects = [title, ring];
+    this.bestiaBurstObjects = [title, subtitle, ring];
     this.scene.tweens.add({
-      targets: title,
+      targets: [title, subtitle],
       scale: 1.18,
       y: 120,
       alpha: 0,
       delay: 450,
       duration: 760,
-      onComplete: () => this.destroyBestiaBurstObject(title),
+      onComplete: () => {
+        this.destroyBestiaBurstObject(title);
+        this.destroyBestiaBurstObject(subtitle);
+      },
     });
     this.scene.tweens.add({
       targets: ring,
@@ -222,7 +236,15 @@ export class EffectsSystem {
     });
   }
 
-  gameOverOverlay(score: number, maxCombo: number, carsDestroyed: number, missionSummary?: string) {
+  gameOverOverlay(
+    score: number,
+    maxCombo: number,
+    carsDestroyed: number,
+    missionSummary?: string,
+    bestComboLabel?: string,
+    bestiaActivations = 0,
+    endTitle = "Destructor Callejero",
+  ) {
     this.clearBestiaBurst();
     this.clearTransientObjects();
     const centerX = this.scene.scale.width / 2;
@@ -240,7 +262,7 @@ export class EffectsSystem {
       })
       .setOrigin(0.5)
       .setDepth(120);
-    const statsText = `PUNTAJE ${score}\nCOMBO MAX x${maxCombo}\nAUTOS DESTRUIDOS ${carsDestroyed}${
+    const statsText = `${endTitle.toUpperCase()}\nPUNTAJE ${score}\nMEJOR COMBO ${bestComboLabel || "-"}\nRACHA MAX x${maxCombo}\nAUTOS ${carsDestroyed}\nBESTIA MODE ${bestiaActivations}${
       missionSummary ? `\nOBJETIVOS ${missionSummary}` : ""
     }`;
     const stats = this.scene.add
