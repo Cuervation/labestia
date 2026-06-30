@@ -12,8 +12,6 @@ type GameOverEventDetail = {
   durationSeconds?: number;
   missionsCompleted?: number;
   missionsTotal?: number;
-  bestiaActivations?: number;
-  bestComboLabel?: string;
   endTitle?: string;
 };
 
@@ -31,8 +29,6 @@ export function PlayPage() {
     carsDestroyed?: number | null;
     missionsCompleted?: number;
     missionsTotal?: number;
-    bestiaActivations?: number;
-    bestComboLabel?: string;
     endTitle?: string;
     message: string;
   } | null>(null);
@@ -49,17 +45,13 @@ export function PlayPage() {
       const durationSeconds = Number(customEvent.detail?.durationSeconds ?? 90);
       const missionsCompleted = Number(customEvent.detail?.missionsCompleted ?? 0);
       const missionsTotal = Number(customEvent.detail?.missionsTotal ?? 0);
-      const bestiaActivations = Number(customEvent.detail?.bestiaActivations ?? 0);
-      const bestComboLabel = customEvent.detail?.bestComboLabel ?? "";
-      const endTitle = customEvent.detail?.endTitle ?? "Destructor Callejero";
+      const endTitle = customEvent.detail?.endTitle ?? "La Bestia";
       const gameOverStats = {
         score,
         maxCombo,
         carsDestroyed,
         missionsCompleted,
         missionsTotal,
-        bestiaActivations,
-        bestComboLabel,
         endTitle,
       };
 

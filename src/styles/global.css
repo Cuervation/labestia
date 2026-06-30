@@ -159,8 +159,12 @@ button:disabled {
 }
 
 .page-shell:has(.cover-screen) {
+  display: grid;
   max-width: none;
+  min-height: 100vh;
+  overflow: hidden;
   padding: 0;
+  place-items: center;
   z-index: 30;
 }
 
@@ -205,6 +209,7 @@ button:disabled {
   overflow: hidden;
   padding: 1rem;
   position: fixed;
+  width: 100%;
   z-index: 20;
 }
 
@@ -1057,10 +1062,13 @@ button:disabled {
 
   .cover-screen {
     align-items: stretch;
+    min-height: 100dvh;
     padding: 0;
+    width: 100vw;
   }
 
   .cover-frame {
+    aspect-ratio: auto;
     border: 0;
     border-radius: 0;
     box-shadow: none;

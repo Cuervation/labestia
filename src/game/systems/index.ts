@@ -4,6 +4,5 @@ export * from "./GameStateSystem";
 export * from "./HudSystem";
 export * from "./MissionSystem";
 export * from "./PlayerSystem";
-export * from "./RiderSystem";
 export * from "./ScoringSystem";
 export * from "./TrafficSystem";

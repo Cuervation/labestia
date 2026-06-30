@@ -1,202 +1,105 @@
-import Phaser from "phaser";
 import { GAME_BALANCE } from "../config/balance";
-import type { CarModel, FlashMissionId, HitResult, MissionCompletion, MissionId, MissionSnapshot } from "../types";
-import type { RiderKind } from "./RiderSystem";
+import type { CarModel, MissionHitResult, MissionSnapshot } from "../types";
 import type { ScoringSystem } from "./ScoringSystem";
 
-type MissionState = MissionSnapshot;
-type FlashMissionConfig = (typeof GAME_BALANCE.flashMissions.list)[number];
-type FlashMissionState = MissionSnapshot & {
-  id: FlashMissionId;
-  expiresAtMs: number;
-  seenModels: Partial<Record<CarModel, boolean>>;
-  rappiStarted: boolean;
-};
-
-const MISSION_IDS: MissionId[] = ["destroyCars", "comboStreak", "bestiaMode"];
+type MissionConfig = (typeof GAME_BALANCE.missionScoring.missions)[number];
 
 export class MissionSystem {
-  private readonly missions: MissionState[] = MISSION_IDS.map((id) => ({
-    id,
-    label: GAME_BALANCE.missions[id].label,
-    progress: 0,
-    target: GAME_BALANCE.missions[id].target,
-    bonus: GAME_BALANCE.missions[id].bonus,
-    completed: false,
-  }));
-  private activeFlashMission: FlashMissionState | null = null;
-  private nextFlashAtMs = GAME_BALANCE.flashMissions.firstAtSeconds * 1000;
-  private lastFlashId: FlashMissionId | null = null;
-  private flashCompleted = 0;
-  private policeBestiaHits = 0;
-  private ecoDestroyed = 0;
+  private activeMission: MissionConfig;
+  private previousMissionId: string | null = null;
+  private progress = 0;
+  private subtotal = 0;
+  private completedCount = 0;
 
-  update(elapsedMs: number) {
-    if (this.activeFlashMission) {
-      this.activeFlashMission.remainingSeconds = Math.max(0, Math.ceil((this.activeFlashMission.expiresAtMs - elapsedMs) / 1000));
-    }
-
-    if (this.activeFlashMission && elapsedMs >= this.activeFlashMission.expiresAtMs) {
-      this.activeFlashMission = null;
-      this.nextFlashAtMs = elapsedMs + GAME_BALANCE.flashMissions.intervalMs;
-    }
-
-    if (!this.activeFlashMission && elapsedMs >= this.nextFlashAtMs) {
-      this.startFlashMission(elapsedMs);
-    }
+  constructor() {
+    this.activeMission = this.pickMission();
   }
 
-  registerHit(hit: HitResult, scoring: ScoringSystem): MissionCompletion[] {
-    const completions: MissionCompletion[] = [];
-
-    if (hit.carModel === "eco") {
-      this.ecoDestroyed += 1;
-    }
-    if (hit.kind === "policeCar" && hit.bestiaModeActive) {
-      this.policeBestiaHits += 1;
-    }
-
-    this.updateBaseMissions(hit, completions);
-    this.updateFlashMission(hit, scoring, completions);
-
-    return completions;
-  }
-
-  registerRider(kind: RiderKind) {
-    if (kind === "gaston" && this.activeFlashMission?.id === "flashRappiCars") {
-      this.activeFlashMission.rappiStarted = true;
-    }
-  }
-
-  getSnapshots(): MissionSnapshot[] {
-    const base = this.missions.map((mission) => ({ ...mission }));
-    if (!this.activeFlashMission) {
-      return base;
+  registerHit(carModel: CarModel | undefined, scoring: ScoringSystem): MissionHitResult {
+    if (carModel !== this.activeMission.model) {
+      this.progress = 0;
+      this.subtotal = 0;
+      return {
+        status: "broken",
+        mission: this.getSnapshot(),
+        expectedModel: this.activeMission.model,
+        actualModel: carModel,
+        awardedScore: 0,
+      };
     }
 
-    return [{ ...this.activeFlashMission }, ...base.slice(0, 2)];
-  }
+    const basePoints = GAME_BALANCE.score[carModel];
+    this.progress += 1;
+    this.subtotal += basePoints;
 
-  getCompletedCount() {
-    return this.missions.filter((mission) => mission.completed).length + this.flashCompleted;
-  }
-
-  getTotalCount() {
-    return this.missions.length + GAME_BALANCE.flashMissions.list.length;
-  }
-
-  getEndTitle(scoring: ScoringSystem) {
-    if (scoring.bestiaActivations >= 2 || this.flashCompleted >= 3) {
-      return "Bestia Total";
-    }
-    if (this.policeBestiaHits >= 1) {
-      return "Antipatrullero";
-    }
-    if (this.ecoDestroyed >= 3) {
-      return "Rey de la Eco";
-    }
-    if (scoring.getBestComboBonus() >= 1200 || scoring.maxCombo >= 6) {
-      return "Combo Animal";
-    }
-    return "Destructor Callejero";
-  }
-
-  private updateBaseMissions(hit: HitResult, completions: MissionCompletion[]) {
-    this.updateMission("destroyCars", (mission) => {
-      mission.progress = Math.min(mission.target, mission.progress + 1);
-    }, completions);
-
-    this.updateMission("comboStreak", (mission) => {
-      mission.progress = Math.min(mission.target, Math.max(mission.progress, hit.comboMultiplier));
-    }, completions);
-
-    if (hit.bestiaActivated) {
-      this.updateMission("bestiaMode", (mission) => {
-        mission.progress = mission.target;
-      }, completions);
-    }
-  }
-
-  private updateFlashMission(hit: HitResult, scoring: ScoringSystem, completions: MissionCompletion[]) {
-    const mission = this.activeFlashMission;
-    if (!mission || mission.completed) {
-      return;
+    if (this.progress < this.activeMission.target) {
+      return {
+        status: "correct",
+        mission: this.getSnapshot(),
+        expectedModel: this.activeMission.model,
+        actualModel: carModel,
+        basePoints,
+        awardedScore: 0,
+      };
     }
 
-    switch (mission.id) {
-      case "flashChery":
-        if (hit.carModel === "chery") {
-          mission.progress += 1;
-        }
-        break;
-      case "flashFocusEco":
-        if (hit.carModel === "focus" || hit.carModel === "eco") {
-          mission.seenModels[hit.carModel] = true;
-          mission.progress = Number(Boolean(mission.seenModels.focus)) + Number(Boolean(mission.seenModels.eco));
-        }
-        break;
-      case "flashPoliceBestia":
-        if (hit.kind === "policeCar" && hit.bestiaModeActive) {
-          mission.progress = 1;
-        }
-        break;
-      case "flashRappiCars":
-        if (mission.rappiStarted && scoring.rappiActive) {
-          mission.progress += 1;
-        }
-        break;
-      case "flashCallejero":
-        if (hit.bonusLabels.some((label) => label.toLowerCase().includes("combo callejero"))) {
-          mission.progress = 1;
-        }
-        break;
-    }
+    const completedMission = this.getSnapshot();
+    const awardedScore = this.subtotal * GAME_BALANCE.missionScoring.completionMultiplier;
+    scoring.addMissionScore(awardedScore);
+    this.completedCount += 1;
+    this.previousMissionId = this.activeMission.id;
+    this.activeMission = this.pickMission(this.previousMissionId);
+    this.progress = 0;
+    this.subtotal = 0;
 
-    mission.progress = Math.min(mission.target, mission.progress);
-    if (mission.progress >= mission.target) {
-      mission.completed = true;
-      this.flashCompleted += 1;
-      completions.push({ ...mission, bestiaCharge: GAME_BALANCE.flashMissions.bestiaCharge });
-      this.activeFlashMission = null;
-      this.nextFlashAtMs = scoring.elapsedSeconds * 1000 + GAME_BALANCE.flashMissions.intervalMs;
-    }
-  }
-
-  private startFlashMission(elapsedMs: number) {
-    const options = GAME_BALANCE.flashMissions.list.filter((mission) => mission.id !== this.lastFlashId);
-    const config = Phaser.Utils.Array.GetRandom(options.length > 0 ? options : [...GAME_BALANCE.flashMissions.list]) as FlashMissionConfig;
-    this.lastFlashId = config.id;
-    this.activeFlashMission = {
-      id: config.id,
-      label: config.label,
-      progress: 0,
-      target: config.target,
-      bonus: config.bonus,
-      completed: false,
-      isFlash: true,
-      remainingSeconds: Math.ceil(GAME_BALANCE.flashMissions.durationMs / 1000),
-      expiresAtMs: elapsedMs + GAME_BALANCE.flashMissions.durationMs,
-      seenModels: {},
-      rappiStarted: false,
+    return {
+      status: "completed",
+      mission: completedMission,
+      expectedModel: completedMission.expectedModel,
+      actualModel: carModel,
+      basePoints,
+      awardedScore,
     };
   }
 
-  private updateMission(
-    id: MissionId,
-    update: (mission: MissionState) => void,
-    completions: MissionCompletion[],
-  ) {
-    const mission = this.missions.find((current) => current.id === id);
+  getSnapshots(): MissionSnapshot[] {
+    return [this.getSnapshot()];
+  }
 
-    if (!mission || mission.completed) {
-      return;
+  getCompletedCount() {
+    return this.completedCount;
+  }
+
+  getTotalCount() {
+    return GAME_BALANCE.missionScoring.missions.length;
+  }
+
+  getEndTitle() {
+    if (this.completedCount >= 5) {
+      return "Misionero perfecto";
     }
-
-    update(mission);
-
-    if (mission.progress >= mission.target) {
-      mission.completed = true;
-      completions.push({ ...mission });
+    if (this.completedCount >= 2) {
+      return "Cadena callejera";
     }
+    return "La Bestia";
+  }
+
+  private getSnapshot(): MissionSnapshot {
+    return {
+      id: this.activeMission.id,
+      label: this.activeMission.label,
+      progress: this.progress,
+      target: this.activeMission.target,
+      multiplier: GAME_BALANCE.missionScoring.completionMultiplier,
+      expectedModel: this.activeMission.model,
+      subtotal: this.subtotal,
+    };
+  }
+
+  private pickMission(excludeId?: string) {
+    const missions = GAME_BALANCE.missionScoring.missions;
+    const options = excludeId ? missions.filter((mission) => mission.id !== excludeId) : missions;
+    const pool = options.length > 0 ? options : missions;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 }

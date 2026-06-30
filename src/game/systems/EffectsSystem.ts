@@ -11,37 +11,25 @@ type FloatingTextOptions = {
 };
 
 export class EffectsSystem {
-  private bestiaAura?: Phaser.GameObjects.Graphics;
-  private bestiaBurstObjects: Phaser.GameObjects.GameObject[] = [];
   private transientObjects: Phaser.GameObjects.GameObject[] = [];
 
   constructor(private readonly scene: Phaser.Scene) {}
 
   impact(kind: VehicleKind, comboMultiplier: number) {
     const isPolice = kind === "policeCar";
-    const isHighCombo = comboMultiplier >= GAME_BALANCE.effects.highComboThreshold;
-    const duration = isPolice
-      ? GAME_BALANCE.effects.policeShakeDurationMs
-      : isHighCombo
-        ? GAME_BALANCE.effects.highComboShakeDurationMs
-        : GAME_BALANCE.effects.normalShakeDurationMs;
-    const intensity = isPolice
-      ? GAME_BALANCE.effects.policeShakeIntensity
-      : isHighCombo
-        ? GAME_BALANCE.effects.highComboShakeIntensity
-        : GAME_BALANCE.effects.normalShakeIntensity;
-    const flashColor = isPolice ? [96, 165, 250] : isHighCombo ? [250, 204, 21] : [255, 210, 90];
+    const duration = isPolice ? GAME_BALANCE.effects.policeShakeDurationMs : GAME_BALANCE.effects.normalShakeDurationMs;
+    const intensity = isPolice ? GAME_BALANCE.effects.policeShakeIntensity : GAME_BALANCE.effects.normalShakeIntensity;
+    const flashColor = isPolice ? [96, 165, 250] : [255, 210, 90];
 
     this.scene.cameras.main.shake(duration, intensity);
     this.scene.cameras.main.flash(GAME_BALANCE.effects.impactFlashMs, flashColor[0], flashColor[1], flashColor[2], false);
-    this.impactRing(isPolice ? 0x60a5fa : isHighCombo ? 0xfacc15 : 0xf97316);
+    this.impactRing(isPolice ? 0x60a5fa : 0xf97316);
   }
 
   sparks(x: number, y: number, kind: VehicleKind, comboMultiplier: number) {
     const isPolice = kind === "policeCar";
-    const isHighCombo = comboMultiplier >= GAME_BALANCE.effects.highComboThreshold;
-    const count = isPolice ? 28 : isHighCombo ? 34 : 22;
-    const color = isPolice ? 0x60a5fa : isHighCombo ? 0xfacc15 : 0xffedd5;
+    const count = isPolice ? 28 : 22;
+    const color = isPolice ? 0x60a5fa : 0xffedd5;
 
     for (let index = 0; index < count; index += 1) {
       const particle = this.scene.add.circle(x, y, Phaser.Math.Between(3, 7), color, 1);
@@ -130,84 +118,6 @@ export class EffectsSystem {
     });
   }
 
-  bestiaBurst(x: number, y: number) {
-    this.clearBestiaBurst();
-    this.scene.cameras.main.shake(260, 0.016);
-    this.scene.cameras.main.flash(170, 250, 204, 21, false);
-    const title = this.scene.add
-      .text(this.scene.scale.width / 2, 155, "BESTIA MODE", {
-        color: "#facc15",
-        fontFamily: "Arial, sans-serif",
-        fontSize: "72px",
-        fontStyle: "bold",
-        stroke: "#7f1d1d",
-        strokeThickness: 10,
-      })
-      .setOrigin(0.5)
-      .setDepth(120);
-    const subtitle = this.scene.add
-      .text(this.scene.scale.width / 2, 212, "ROMPE TODO x2", {
-        color: "#fff7ed",
-        fontFamily: "Arial, sans-serif",
-        fontSize: "36px",
-        fontStyle: "bold",
-        stroke: "#111111",
-        strokeThickness: 7,
-      })
-      .setOrigin(0.5)
-      .setDepth(120);
-    const ring = this.scene.add.circle(x, y, 76, 0xffffff, 0).setStrokeStyle(8, 0xfacc15, 0.92).setDepth(32);
-
-    this.bestiaBurstObjects = [title, subtitle, ring];
-    this.scene.tweens.add({
-      targets: [title, subtitle],
-      scale: 1.18,
-      y: 120,
-      alpha: 0,
-      delay: 450,
-      duration: 760,
-      onComplete: () => {
-        this.destroyBestiaBurstObject(title);
-        this.destroyBestiaBurstObject(subtitle);
-      },
-    });
-    this.scene.tweens.add({
-      targets: ring,
-      scale: 2.5,
-      alpha: 0,
-      duration: 760,
-      onComplete: () => this.destroyBestiaBurstObject(ring),
-    });
-  }
-
-  updateBestiaAura(sprite: Phaser.GameObjects.Sprite, active: boolean) {
-    if (!active) {
-      this.clearBestiaAura();
-      return;
-    }
-
-    if (!this.bestiaAura) {
-      this.bestiaAura = this.scene.add.graphics().setDepth(9);
-    }
-
-    const pulse = 0.75 + Math.sin(this.scene.time.now / 90) * 0.15;
-    this.bestiaAura.clear();
-    this.bestiaAura.lineStyle(5, 0xfacc15, pulse);
-    this.bestiaAura.strokeEllipse(sprite.x, sprite.y, sprite.displayWidth + 42, sprite.displayHeight + 42);
-    this.bestiaAura.lineStyle(2, 0xef4444, 0.8);
-    this.bestiaAura.strokeEllipse(sprite.x, sprite.y, sprite.displayWidth + 66, sprite.displayHeight + 66);
-  }
-
-  clearBestiaAura() {
-    this.bestiaAura?.destroy();
-    this.bestiaAura = undefined;
-  }
-
-  clearBestiaBurst() {
-    this.bestiaBurstObjects.forEach((item) => item.destroy());
-    this.bestiaBurstObjects = [];
-  }
-
   missionComplete(label: string, bonus: number, stackIndex = 0) {
     const centerX = this.scene.scale.width / 2;
     const y = 214 + stackIndex * 72;
@@ -238,14 +148,10 @@ export class EffectsSystem {
 
   gameOverOverlay(
     score: number,
-    maxCombo: number,
     carsDestroyed: number,
     missionSummary?: string,
-    bestComboLabel?: string,
-    bestiaActivations = 0,
-    endTitle = "Destructor Callejero",
+    endTitle = "La Bestia",
   ) {
-    this.clearBestiaBurst();
     this.clearTransientObjects();
     const centerX = this.scene.scale.width / 2;
     const centerY = this.scene.scale.height / 2;
@@ -262,7 +168,7 @@ export class EffectsSystem {
       })
       .setOrigin(0.5)
       .setDepth(120);
-    const statsText = `${endTitle.toUpperCase()}\nPUNTAJE ${score}\nMEJOR COMBO ${bestComboLabel || "-"}\nRACHA MAX x${maxCombo}\nAUTOS ${carsDestroyed}\nBESTIA MODE ${bestiaActivations}${
+    const statsText = `${endTitle.toUpperCase()}\nPUNTAJE ${score}\nAUTOS ${carsDestroyed}${
       missionSummary ? `\nOBJETIVOS ${missionSummary}` : ""
     }`;
     const stats = this.scene.add
@@ -305,11 +211,6 @@ export class EffectsSystem {
       duration: 260,
       onComplete: () => ring.destroy(),
     });
-  }
-
-  private destroyBestiaBurstObject(item: Phaser.GameObjects.GameObject) {
-    item.destroy();
-    this.bestiaBurstObjects = this.bestiaBurstObjects.filter((current) => current !== item);
   }
 
   private destroyTransientObject(item: Phaser.GameObjects.GameObject) {

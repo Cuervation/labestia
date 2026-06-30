@@ -3,41 +3,25 @@ export type GameSessionState = "countdown" | "running" | "finished";
 export type VehicleKind = "normalCar" | "taxi" | "van" | "policeCar";
 export type CarModel = "peugeot" | "chery" | "meriva" | "focus" | "eco";
 
-export type MissionId = "destroyCars" | "comboStreak" | "bestiaMode";
-export type FlashMissionId =
-  | "flashChery"
-  | "flashFocusEco"
-  | "flashPoliceBestia"
-  | "flashRappiCars"
-  | "flashCallejero";
-
 export type MissionSnapshot = {
-  id: MissionId | FlashMissionId;
+  id: string;
   label: string;
   progress: number;
   target: number;
-  bonus: number;
-  completed: boolean;
-  isFlash?: boolean;
-  remainingSeconds?: number;
+  multiplier: number;
+  expectedModel: CarModel;
+  subtotal: number;
 };
 
-export type MissionCompletion = MissionSnapshot & {
-  bonus: number;
-  bestiaCharge?: number;
-};
+export type MissionHitStatus = "correct" | "broken" | "completed";
 
-export type HitResult = {
-  kind: VehicleKind;
-  carModel?: CarModel;
-  points: number;
-  comboMultiplier: number;
-  bonusPoints: number;
-  bonusLabels: string[];
-  bestiaActivated: boolean;
-  bestiaModeActive: boolean;
-  policePunished: boolean;
-  bestiaChargeGain?: number;
+export type MissionHitResult = {
+  status: MissionHitStatus;
+  mission: MissionSnapshot;
+  expectedModel: CarModel;
+  actualModel?: CarModel;
+  basePoints?: number;
+  awardedScore: number;
 };
 
 declare global {

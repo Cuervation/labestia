@@ -5,8 +5,6 @@ type GameOverPanelProps = {
   carsDestroyed?: number | null;
   missionsCompleted?: number;
   missionsTotal?: number;
-  bestiaActivations?: number;
-  bestComboLabel?: string;
   endTitle?: string;
   onRestart?: () => void;
   onShowRanking?: () => void;

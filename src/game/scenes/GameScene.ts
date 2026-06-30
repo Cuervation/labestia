@@ -1,14 +1,13 @@
 import Phaser from "phaser";
 import { GAME_BALANCE } from "../config/balance";
 import { ASSET_KEYS, STREET_ASSETS } from "../config/assets";
-import { AudioSystem, EffectsSystem, GameStateSystem, HudSystem, MissionSystem, PlayerSystem, RiderSystem, ScoringSystem, TrafficSystem } from "../systems";
+import { AudioSystem, EffectsSystem, GameStateSystem, HudSystem, MissionSystem, PlayerSystem, ScoringSystem, TrafficSystem } from "../systems";
 import type { VehicleKind } from "../types";
 
 export class GameScene extends Phaser.Scene {
   private player?: PlayerSystem;
   private scoring?: ScoringSystem;
   private traffic?: TrafficSystem;
-  private riders?: RiderSystem;
   private effects?: EffectsSystem;
   private hud?: HudSystem;
   private missions?: MissionSystem;
@@ -41,7 +40,6 @@ export class GameScene extends Phaser.Scene {
     this.player = new PlayerSystem(this);
     this.scoring = new ScoringSystem();
     this.traffic = new TrafficSystem(this);
-    this.riders = new RiderSystem(this);
     this.effects = new EffectsSystem(this);
     this.hud = new HudSystem(this);
     this.missions = new MissionSystem();
@@ -55,14 +53,6 @@ export class GameScene extends Phaser.Scene {
         this.handleVehicleCollision(vehicleObject as Phaser.Physics.Arcade.Sprite);
       },
     );
-    this.physics.add.overlap(
-      this.player.sprite,
-      this.riders.group,
-      (_playerObject, riderObject) => {
-        this.handleRiderCollision(riderObject as Phaser.Physics.Arcade.Sprite);
-      },
-    );
-
     window.render_game_to_text = () => this.renderGameToText();
     window.advanceTime = (ms: number) => this.advanceGameTime(ms);
 
@@ -92,7 +82,6 @@ export class GameScene extends Phaser.Scene {
       !this.player ||
       !this.scoring ||
       !this.traffic ||
-      !this.riders ||
       !this.effects ||
       !this.hud ||
       !this.missions ||
@@ -111,14 +100,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.scoring.update(delta);
-    this.missions.update(this.scoring.elapsedSeconds * 1000);
     this.updateRoad(delta);
     this.updateWomanStreetEvent(time);
-    this.player.update(time, this.scoring.getPlayerSpeedMultiplier(), this.isWhistleDialogActive(time));
+    this.player.update(time, 1, this.isWhistleDialogActive(time));
     this.traffic.update(time, this.scoring.getDifficulty());
-    this.riders.update(time);
     this.hud.update(this.scoring, this.missions.getSnapshots());
-    this.effects.updateBestiaAura(this.player.sprite, this.scoring.bestiaModeActive);
     this.updateWhistleDialog(time);
     this.emitSmoke(delta);
 
@@ -134,113 +120,45 @@ export class GameScene extends Phaser.Scene {
 
     const kind = this.traffic.getVehicleKind(vehicle);
     const carModel = this.traffic.getCarModel(vehicle);
-    const hit = this.scoring.registerHit(kind, carModel, vehicle.y, this.scale.height);
     const x = vehicle.x;
     const y = vehicle.y;
     const isPolice = kind === "policeCar";
-    const isHighCombo = hit.comboMultiplier >= GAME_BALANCE.effects.highComboThreshold;
 
     this.traffic.destroyVehicle(vehicle);
-    const completedMissions = this.missions?.registerHit(hit, this.scoring) ?? [];
-    completedMissions.forEach((mission) => {
-      this.scoring?.addBonus(mission.bonus);
-      if (mission.bestiaCharge) {
-        const bestiaActivated = this.scoring?.addBestiaChargeBonus(mission.bestiaCharge);
-        if (bestiaActivated && this.player) {
-          this.audio?.playBestiaMode();
-          this.effects?.bestiaBurst(this.player.sprite.x, this.player.sprite.y);
-        }
-      }
-    });
-    if (completedMissions.length > 0) {
-      const bonusTotal = completedMissions.reduce((total, mission) => total + mission.bonus, 0);
-      const label = completedMissions.length === 1 ? completedMissions[0].label : `${completedMissions.length} OBJETIVOS`;
-      this.effects?.missionComplete(label, bonusTotal);
-      this.effects?.floatingText(this.scale.width / 2, 278, `BONUS +${bonusTotal}`, {
+    this.scoring.registerVehicleDestroyed();
+    const missionHit = this.missions?.registerHit(carModel, this.scoring);
+
+    this.audio?.playHit(kind, 1);
+    this.effects.impact(kind, 1);
+    this.effects.sparks(x, y, kind, 1);
+    this.effects.explosion(x, y, 1);
+
+    if (missionHit?.status === "correct") {
+      this.effects.floatingText(x, y - 34, `${this.formatCarModel(carModel)} ${missionHit.mission.progress}/${missionHit.mission.target}`, {
+        color: "#86efac",
+        fontSize: 42,
+      });
+    } else if (missionHit?.status === "completed") {
+      this.effects.missionComplete(missionHit.mission.label, missionHit.awardedScore);
+      this.effects.floatingText(this.scale.width / 2, 278, `MISION COMPLETADA +${missionHit.awardedScore}`, {
         color: "#86efac",
         fontSize: 38,
         rise: 64,
       });
-    }
-    this.audio?.playHit(kind, hit.comboMultiplier);
-    this.effects.impact(kind, hit.comboMultiplier);
-    this.effects.sparks(x, y, kind, hit.comboMultiplier);
-    this.effects.explosion(x, y, hit.comboMultiplier);
-    const baseLabel = isPolice
-      ? hit.bestiaModeActive
-        ? "POLICÍA DESTRUIDA +1000"
-        : "POLICÍA +250"
-      : `${this.formatCarModel(hit.carModel)} +${hit.points}`;
-
-    this.effects.floatingText(x, y - 34, baseLabel, {
-      color: isPolice ? "#60a5fa" : isHighCombo ? "#facc15" : "#fff7ed",
-      fontSize: isHighCombo ? 52 : 42,
-    });
-
-    if (hit.bestiaChargeGain && hit.carModel === "eco") {
-      this.effects.floatingText(x, y - 82, `BESTIA +${hit.bestiaChargeGain}%`, {
-        color: "#facc15",
-        fontSize: 34,
-        rise: 82,
+    } else {
+      this.effects.floatingText(x, y - 34, "CADENA ROTA", {
+        color: isPolice ? "#93c5fd" : "#fb7185",
+        fontSize: 40,
       });
     }
 
-    hit.bonusLabels.forEach((label, index) => {
-      const normalizedLabel = label.toUpperCase();
-      const isSequenceCombo = normalizedLabel.startsWith("COMBO ");
-      const labelX = isSequenceCombo ? this.scale.width / 2 : x;
-      const labelY = isSequenceCombo ? 250 + index * 50 : y - 84 - index * 42;
-      this.effects?.floatingText(labelX, labelY, normalizedLabel, {
-        color: normalizedLabel.includes("POLICIA") ? "#93c5fd" : isSequenceCombo ? "#facc15" : "#86efac",
-        fontSize: isSequenceCombo ? 46 : 32,
-        rise: isSequenceCombo ? 100 : 86,
-      });
-    });
-
-    if (hit.comboMultiplier >= 2) {
-      this.effects.floatingText(x, y - 78, `x${hit.comboMultiplier} COMBO`, {
-        color: isHighCombo ? "#facc15" : "#ffffff",
-        fontSize: isHighCombo ? 46 : 36,
-        rise: 92,
-      });
-    }
-
-    if (hit.bestiaActivated) {
-      this.audio?.playBestiaMode();
-      this.effects.bestiaBurst(this.player.sprite.x, this.player.sprite.y);
-    }
-
-    if (kind === "policeCar" && hit.policePunished) {
+    if (kind === "policeCar") {
       this.player.applyPoliceTurnLock(this.simulatedTime);
       this.effects.floatingText(this.player.sprite.x, this.player.sprite.y - 80, "SIN GIRO", {
         color: "#93c5fd",
         fontSize: 34,
       });
     }
-  }
-
-  private handleRiderCollision(riderSprite: Phaser.Physics.Arcade.Sprite) {
-    if (!this.scoring || !this.riders || !this.effects || this.gameOverSent || !riderSprite.active) {
-      return;
-    }
-
-    const rider = this.riders.getRider(riderSprite);
-    const x = riderSprite.x;
-    const y = riderSprite.y;
-
-    this.riders.destroyRider(riderSprite);
-    if (rider.kind === "gaston") {
-      this.scoring.activateRappi();
-    } else {
-      this.scoring.activatePedidosYa();
-    }
-    this.missions?.registerRider(rider.kind);
-    const riderLabel = rider.kind === "gaston" ? "RAPPI x2 8s" : rider.label;
-    this.effects.floatingText(x, y - 34, riderLabel, {
-      color: rider.kind === "osky" ? "#facc15" : "#fb7185",
-      fontSize: 34,
-      rise: 78,
-    });
   }
 
   private emitSmoke(delta: number) {
@@ -271,9 +189,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverSent = true;
     this.gameState?.finish();
     this.audio?.playGameOver();
-    this.effects.clearBestiaAura();
     this.traffic?.clearVehicles();
-    this.riders?.clearRiders();
     this.physics.pause();
 
     window.dispatchEvent(
@@ -283,9 +199,7 @@ export class GameScene extends Phaser.Scene {
           maxCombo: this.scoring.maxCombo,
           carsDestroyed: this.scoring.autosDestroyed,
           durationSeconds: GAME_BALANCE.durationSeconds,
-          bestiaActivations: this.scoring.bestiaActivations,
-          bestComboLabel: this.scoring.bestComboLabel,
-          endTitle: this.missions?.getEndTitle(this.scoring) ?? "Destructor Callejero",
+          endTitle: this.missions?.getEndTitle() ?? "La Bestia",
           missionsCompleted: this.missions?.getCompletedCount() ?? 0,
           missionsTotal: this.missions?.getTotalCount() ?? 0,
         },
@@ -295,12 +209,9 @@ export class GameScene extends Phaser.Scene {
     const missionSummary = `${this.missions?.getCompletedCount() ?? 0}/${this.missions?.getTotalCount() ?? 0}`;
     this.effects.gameOverOverlay(
       this.scoring.score,
-      this.scoring.maxCombo,
       this.scoring.autosDestroyed,
       missionSummary,
-      this.scoring.bestComboLabel,
-      this.scoring.bestiaActivations,
-      this.missions?.getEndTitle(this.scoring),
+      this.missions?.getEndTitle(),
     );
 
     this.scene.pause();
@@ -508,19 +419,9 @@ export class GameScene extends Phaser.Scene {
         : null,
       playerFacing: this.player?.getFacing?.() ?? "center",
       score: this.scoring?.score ?? 0,
-      combo: this.scoring?.comboCount ?? 0,
-      bestiaMode: this.scoring?.bestiaModeActive ?? false,
       remainingSeconds: Math.ceil(this.scoring?.remainingSeconds ?? GAME_BALANCE.durationSeconds),
-      missions: this.missions?.getSnapshots() ?? [],
+      mission: this.missions?.getSnapshots()[0] ?? null,
       traffic,
-      riders: this.riders?.group.getChildren().map((child) => {
-        const sprite = child as Phaser.Physics.Arcade.Sprite;
-        return {
-          kind: sprite.getData("riderKind") as string,
-          x: Math.round(sprite.x),
-          y: Math.round(sprite.y),
-        };
-      }) ?? [],
       streetDecorations: this.streetDecorations.map((decoration) => ({
         texture: decoration.texture.key,
         x: Math.round(decoration.x),
@@ -541,3 +442,4 @@ export class GameScene extends Phaser.Scene {
     delete window.advanceTime;
   }
 }
+

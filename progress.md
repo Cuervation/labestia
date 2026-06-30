@@ -139,3 +139,7 @@
 - Validation: npm run typecheck and npm run build passed; Playwright smoke verified /play, mujer visibility, FIUUUU bubble screenshot, and ranking popup score visibility.
 
 - HUD QA: detected top-hud-frame.png has transparent top padding (alpha bbox starts at y=198), so moved Phaser HUD group up with topOffset -66 and shifted timer/score left to avoid clipping.
+
+- Refactor scoring in progress: replaced old temporal combo/Bestia/rider mission scoring with one active random perfect-sequence mission and x10 completion scoring. Pending typecheck/build/smoke.
+
+- Refactor scoring validated: npm run typecheck and npm run build passed; browser smoke showed active random mission in HUD and MissionSystem browser check verified correct progress, wrong hit reset, completion score subtotal*x10, and new mission generation.

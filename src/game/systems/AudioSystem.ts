@@ -1,11 +1,10 @@
-﻿import type { VehicleKind } from "../types";
+import type { VehicleKind } from "../types";
 
-type AudioKind = "hit" | "combo" | "bestia" | "gameOver";
+type AudioKind = "hit" | "police" | "gameOver";
 
 const FREQUENCIES: Record<AudioKind, number[]> = {
   hit: [120, 78],
-  combo: [260, 390, 520],
-  bestia: [220, 330, 660],
+  police: [260, 390, 520],
   gameOver: [180, 120, 80],
 };
 
@@ -13,17 +12,8 @@ export class AudioSystem {
   private context?: AudioContext;
   private enabled = true;
 
-  playHit(kind: VehicleKind, comboMultiplier: number) {
-    if (comboMultiplier >= 4) {
-      this.play("combo");
-      return;
-    }
-
-    this.play(kind === "policeCar" ? "combo" : "hit");
-  }
-
-  playBestiaMode() {
-    this.play("bestia", 0.08);
+  playHit(kind: VehicleKind, _comboMultiplier: number) {
+    this.play(kind === "policeCar" ? "police" : "hit");
   }
 
   playGameOver() {
@@ -54,7 +44,7 @@ export class AudioSystem {
         const start = now + index * 0.075;
         const end = start + 0.1;
 
-        oscillator.type = kind === "bestia" ? "sawtooth" : "square";
+        oscillator.type = "square";
         oscillator.frequency.setValueAtTime(frequency, start);
         gain.gain.setValueAtTime(0.0001, start);
         gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);
