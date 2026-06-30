@@ -56,6 +56,9 @@ export const GAME_BALANCE = {
     colliderOffsetYRatio: 0.05,
     explosionSize: 116,
     minVehicleGap: 190,
+    safePassageWindowPx: 220,
+    maxBlockedLanesInWindow: 2,
+    spawnSkipIfNoSafeLane: true,
     focusSpeedMultiplier: 1.28,
     lanes: [258, 360, 462],
     easy: {

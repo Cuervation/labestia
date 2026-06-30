@@ -39,6 +39,7 @@ export class TrafficSystem {
   readonly group: Phaser.Physics.Arcade.Group;
   private nextSpawnAt = 0;
   private started = false;
+  private spawnSequence = 0;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.group = scene.physics.add.group();
@@ -66,6 +67,8 @@ export class TrafficSystem {
       }
       return true;
     });
+
+    this.enforceSafePassageWindows();
   }
 
   destroyVehicle(sprite: Phaser.Physics.Arcade.Sprite) {
@@ -87,12 +90,13 @@ export class TrafficSystem {
 
   private spawnVehicle(config: SpawnConfig) {
     const kind = this.pickVehicleKind(config.policeChance);
-    const x = this.pickSafeLane();
-    if (x === null) {
+    const y = -90;
+    const laneIndex = this.pickLaneWithGuaranteedGap(y);
+    if (laneIndex === null) {
       return;
     }
 
-    const y = -90;
+    const x = GAME_BALANCE.traffic.lanes[laneIndex];
     const carModel = kind === "policeCar" ? undefined : this.pickCarModel(config.modelWeights);
     const texture = kind === "policeCar" ? ASSET_KEYS.policeCar : CAR_MODEL_TEXTURES[carModel ?? "peugeot"];
     const speed = this.getSafeSpeed(x, this.getModelSpeed(config, carModel));
@@ -101,6 +105,8 @@ export class TrafficSystem {
     sprite.setData("vehicleKind", kind);
     sprite.setData("carModel", carModel);
     sprite.setData("vehicleTexture", texture);
+    sprite.setData("spawnSequence", this.spawnSequence);
+    this.spawnSequence += 1;
     this.scaleVehicle(sprite, kind);
     sprite.setVelocityY(speed);
     sprite.setDepth(kind === "policeCar" ? 8 : 6);
@@ -116,14 +122,103 @@ export class TrafficSystem {
     );
   }
 
-  private pickSafeLane() {
-    const lanes = Phaser.Utils.Array.Shuffle([...GAME_BALANCE.traffic.lanes]);
-    const minGap = GAME_BALANCE.traffic.minVehicleGap;
+  private pickLaneWithGuaranteedGap(y: number): number | null {
+    const laneIndexes = Phaser.Utils.Array.Shuffle(GAME_BALANCE.traffic.lanes.map((_lane, index) => index));
+    const safeLane = laneIndexes.find((laneIndex) => this.hasMinimumGapInLane(laneIndex, y) && !this.wouldCreateFullBlock(laneIndex, y));
 
-    return lanes.find((lane) => {
-      const closestVehicle = this.getClosestVehicleInLane(lane);
-      return !closestVehicle || closestVehicle.y > minGap;
-    }) ?? null;
+    if (safeLane !== undefined) {
+      return safeLane;
+    }
+
+    return GAME_BALANCE.traffic.spawnSkipIfNoSafeLane ? null : laneIndexes[0] ?? null;
+  }
+
+  private hasMinimumGapInLane(laneIndex: number, y: number) {
+    const lane = GAME_BALANCE.traffic.lanes[laneIndex];
+    const closestVehicle = this.getClosestVehicleInLane(lane);
+    return !closestVehicle || closestVehicle.y - y > GAME_BALANCE.traffic.minVehicleGap;
+  }
+
+  private getBlockedLanesNearY(y: number, windowPx: number): Set<number> {
+    const blockedLanes = new Set<number>();
+
+    this.group.getChildren().forEach((child) => {
+      const sprite = child as Phaser.Physics.Arcade.Sprite;
+      if (!sprite.active || Math.abs(sprite.y - y) > windowPx) {
+        return;
+      }
+
+      const laneIndex = this.getLaneIndexForX(sprite.x);
+      if (laneIndex !== null) {
+        blockedLanes.add(laneIndex);
+      }
+    });
+
+    return blockedLanes;
+  }
+
+  private wouldCreateFullBlock(laneIndex: number, y: number) {
+    const blockedLanes = this.getBlockedLanesNearY(y, GAME_BALANCE.traffic.safePassageWindowPx);
+    blockedLanes.add(laneIndex);
+    return blockedLanes.size > GAME_BALANCE.traffic.maxBlockedLanesInWindow;
+  }
+
+  private enforceSafePassageWindows() {
+    const vehicles = this.getActiveLaneVehicles().sort((left, right) => left.sprite.y - right.sprite.y);
+
+    vehicles.forEach(({ sprite }) => {
+      if (!sprite.active) {
+        return;
+      }
+
+      const blockersByLane = new Map<number, Phaser.Physics.Arcade.Sprite>();
+      vehicles.forEach((candidate) => {
+        if (!candidate.sprite.active || Math.abs(candidate.sprite.y - sprite.y) > GAME_BALANCE.traffic.safePassageWindowPx) {
+          return;
+        }
+
+        const current = blockersByLane.get(candidate.laneIndex);
+        if (!current || this.getSpawnSequence(candidate.sprite) > this.getSpawnSequence(current)) {
+          blockersByLane.set(candidate.laneIndex, candidate.sprite);
+        }
+      });
+
+      if (blockersByLane.size <= GAME_BALANCE.traffic.maxBlockedLanesInWindow) {
+        return;
+      }
+
+      this.removeNewestBlocker([...blockersByLane.values()]);
+    });
+  }
+
+  private getActiveLaneVehicles() {
+    return this.group
+      .getChildren()
+      .map((child) => {
+        const sprite = child as Phaser.Physics.Arcade.Sprite;
+        return {
+          sprite,
+          laneIndex: this.getLaneIndexForX(sprite.x),
+        };
+      })
+      .filter((vehicle): vehicle is { sprite: Phaser.Physics.Arcade.Sprite; laneIndex: number } => vehicle.sprite.active && vehicle.laneIndex !== null);
+  }
+
+  private removeNewestBlocker(vehicles: Phaser.Physics.Arcade.Sprite[]) {
+    const newest = vehicles.reduce((selected, vehicle) =>
+      this.getSpawnSequence(vehicle) > this.getSpawnSequence(selected) ? vehicle : selected,
+    );
+
+    this.destroyVehicle(newest);
+  }
+
+  private getSpawnSequence(sprite: Phaser.Physics.Arcade.Sprite) {
+    return Number(sprite.getData("spawnSequence") ?? -1);
+  }
+
+  private getLaneIndexForX(x: number) {
+    const laneIndex = GAME_BALANCE.traffic.lanes.findIndex((lane) => Math.abs(lane - x) <= 2);
+    return laneIndex >= 0 ? laneIndex : null;
   }
 
   private getSafeSpeed(lane: number, speed: number) {

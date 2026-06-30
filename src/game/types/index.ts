@@ -13,7 +13,7 @@ export type MissionSnapshot = {
   subtotal: number;
 };
 
-export type MissionHitStatus = "correct" | "broken" | "completed";
+export type MissionHitStatus = "correct" | "nonTarget" | "completed";
 
 export type MissionHitResult = {
   status: MissionHitStatus;

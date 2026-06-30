@@ -31,17 +31,19 @@ export class HudSystem {
       .text(scoreValueX, 104 + this.topOffset, "0", this.valueStyle())
       .setOrigin(0.5, 0.5)
       .setPadding(10, 4, 10, 4);
-    this.difficultyText = scene.add.text(scene.scale.width - 28, 158 + this.topOffset, "PUNTAJE ? NIVEL EASY", this.style("#38bdf8", 18)).setOrigin(1, 0);
+    this.difficultyText = scene.add.text(scene.scale.width - 28, 158 + this.topOffset, "PUNTAJE ? NIVEL EASY", this.style("#38bdf8", 24, "Teko, Arial, sans-serif")).setOrigin(1, 0);
     this.hintText = scene.add
       .text(scene.scale.width / 2, 330 + this.topOffset, "COMPLET? LA MISI?N PERFECTA", {
-        ...this.style("#fff7ed", 22),
+        ...this.style("#fff7ed", 22, "Luckiest Guy, Impact, sans-serif"),
         align: "center",
         wordWrap: { width: scene.scale.width - 48 },
       })
       .setOrigin(0.5, 0);
-    this.missionTexts = [0, 1, 2].map((index) =>
-      scene.add.text(40, 194 + this.topOffset + index * 38, "", this.style("#fff7ed", 19)),
-    );
+    this.missionTexts = [
+      scene.add.text(40, 194 + this.topOffset, "", this.style("#fff7ed", 19, "Luckiest Guy, Impact, sans-serif")),
+      scene.add.text(40, 232 + this.topOffset, "", this.style("#fff7ed", 27, "Teko, Arial, sans-serif")),
+      scene.add.text(40, 270 + this.topOffset, "", this.style("#fff7ed", 19, "Luckiest Guy, Impact, sans-serif")),
+    ];
 
     [
       this.scoreText,
@@ -75,7 +77,7 @@ export class HudSystem {
     return {
       align: "center",
       color: "#fff7ed",
-      fontFamily: "Impact, Haettenschweiler, Arial Black, sans-serif",
+      fontFamily: "Teko, Arial, sans-serif",
       fontSize: "36px",
       fontStyle: "bold",
       stroke: "#050505",
@@ -83,10 +85,10 @@ export class HudSystem {
     };
   }
 
-  private style(color: string, fontSize: number): Phaser.Types.GameObjects.Text.TextStyle {
+  private style(color: string, fontSize: number, fontFamily: string): Phaser.Types.GameObjects.Text.TextStyle {
     return {
       color,
-      fontFamily: "Arial, sans-serif",
+      fontFamily,
       fontSize: `${fontSize}px`,
       fontStyle: "bold",
       stroke: "#111111",

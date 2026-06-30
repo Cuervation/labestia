@@ -97,7 +97,7 @@ export class EffectsSystem {
     const label = this.scene.add
       .text(x, y, text, {
         color: options.color ?? "#ffffff",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Teko, Arial, sans-serif",
         fontSize: `${options.fontSize ?? 40}px`,
         fontStyle: "bold",
         stroke: "#111111",
@@ -125,7 +125,7 @@ export class EffectsSystem {
       .text(centerX, y, `OBJETIVO COMPLETO\n${label}  +${bonus}`, {
         align: "center",
         color: "#86efac",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Luckiest Guy, Impact, sans-serif",
         fontSize: "34px",
         fontStyle: "bold",
         stroke: "#052e16",
@@ -160,7 +160,7 @@ export class EffectsSystem {
     const title = this.scene.add
       .text(centerX, centerY - 112, "FIN DE PARTIDA", {
         color: "#facc15",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Russo One, Arial, sans-serif",
         fontSize: "58px",
         fontStyle: "bold",
         stroke: "#7f1d1d",
@@ -175,7 +175,7 @@ export class EffectsSystem {
       .text(centerX, centerY - 24, statsText, {
         align: "center",
         color: "#fff7ed",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Russo One, Arial, sans-serif",
         fontSize: "32px",
         fontStyle: "bold",
         stroke: "#111111",
@@ -186,7 +186,7 @@ export class EffectsSystem {
     const hint = this.scene.add
       .text(centerX, centerY + 124, "Usá JUGAR DE NUEVO abajo para reiniciar", {
         color: "#fecaca",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Russo One, Arial, sans-serif",
         fontSize: "22px",
         fontStyle: "bold",
         stroke: "#111111",

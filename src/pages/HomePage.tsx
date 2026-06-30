@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { preloadCriticalGameAssets } from "../assets/preloadGameAssets";
 import { RankingPopup } from "../components";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthStore } from "../store";
 
-export function HomePage() {
+type HomePageProps = {
+  onNavigate?: (path: string) => void;
+};
+
+export function HomePage({ onNavigate }: HomePageProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const logoRevealedRef = useRef(false);
   const soundEnabledRef = useRef(false);
@@ -31,7 +36,6 @@ export function HomePage() {
     };
 
     audio.muted = true;
-    audio.load();
     window.addEventListener("laBestia:coverLogoRevealed", playAudio);
 
     return () => {
@@ -54,8 +58,11 @@ export function HomePage() {
 
     audio.muted = !nextSoundEnabled;
 
-    if (nextSoundEnabled && logoRevealedRef.current) {
-      void audio.play().catch(() => undefined);
+    if (nextSoundEnabled) {
+      audio.load();
+      if (logoRevealedRef.current) {
+        void audio.play().catch(() => undefined);
+      }
       return;
     }
 
@@ -67,6 +74,7 @@ export function HomePage() {
   const handleLogoRevealEnd = () => {
     logoRevealedRef.current = true;
     window.dispatchEvent(new Event("laBestia:coverLogoRevealed"));
+    preloadCriticalGameAssets();
   };
 
   const handleAuthMenuAction = async () => {
@@ -78,6 +86,16 @@ export function HomePage() {
     }
 
     await login();
+  };
+
+  const handlePlay = () => {
+    if (onNavigate) {
+      onNavigate("/play");
+      return;
+    }
+
+    window.history.pushState({}, "", "/play");
+    window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
   return (
@@ -148,7 +166,7 @@ export function HomePage() {
           aria-hidden="true"
           onAnimationEnd={handleLogoRevealEnd}
         />
-        <audio ref={audioRef} src="/assets/yocanibal.mp3" preload="auto" />
+        <audio ref={audioRef} src="/assets/yocanibal.mp3" preload="none" />
         {isFirebaseConfigured && !user ? (
           <>
             <button
@@ -170,7 +188,9 @@ export function HomePage() {
             {statusMessage ? <p className="cover-auth-status">{statusMessage}</p> : null}
           </>
         ) : (
-          <a className="cover-play-button" href="/play">JUGAR</a>
+          <button className="cover-play-button" type="button" onClick={handlePlay}>
+            JUGAR
+          </button>
         )}
         {rankingOpen ? <RankingPopup onClose={() => setRankingOpen(false)} /> : null}
       </div>

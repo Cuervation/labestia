@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { GAME_BALANCE } from "../config/balance";
-import { ASSET_KEYS, STREET_ASSETS } from "../config/assets";
+import { ASSET_KEYS, BACKGROUND_STREET_ASSETS, STREET_ASSETS, type GameAsset } from "../config/assets";
 import { AudioSystem, EffectsSystem, GameStateSystem, HudSystem, MissionSystem, PlayerSystem, ScoringSystem, TrafficSystem } from "../systems";
 import type { VehicleKind } from "../types";
 
@@ -19,6 +19,8 @@ export class GameScene extends Phaser.Scene {
   private nextWomanEventAt = 0;
   private roadTiles: Phaser.GameObjects.Image[] = [];
   private streetDecorations: Phaser.GameObjects.Image[] = [];
+  private streetRotationIndex = 0;
+  private backgroundStreetLoadStarted = false;
   private whistleDialog?: {
     bubble: Phaser.GameObjects.Graphics;
     text: Phaser.GameObjects.Text;
@@ -36,6 +38,8 @@ export class GameScene extends Phaser.Scene {
     this.scheduleNextWomanStreetEvent(this.simulatedTime);
 
     this.drawRoad();
+    this.logCreateTiming();
+    this.loadBackgroundStreetAssets();
 
     this.player = new PlayerSystem(this);
     this.scoring = new ScoringSystem();
@@ -92,6 +96,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.gameState.update(delta);
+    if (this.gameState.running && !this.scoring.started) {
+      this.scoring.start(performance.now());
+    }
+
     this.hud.update(this.scoring, this.missions.getSnapshots());
 
     if (!this.gameState.running) {
@@ -99,7 +107,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.scoring.update(delta);
+    this.scoring.update(performance.now());
+    if (this.scoring.isFinished()) {
+      this.finishGame();
+      return;
+    }
+
     this.updateRoad(delta);
     this.updateWomanStreetEvent(time);
     this.player.update(time, 1, this.isWhistleDialogActive(time));
@@ -107,10 +120,6 @@ export class GameScene extends Phaser.Scene {
     this.hud.update(this.scoring, this.missions.getSnapshots());
     this.updateWhistleDialog(time);
     this.emitSmoke(delta);
-
-    if (this.scoring.isFinished()) {
-      this.finishGame();
-    }
   }
 
   private handleVehicleCollision(vehicle: Phaser.Physics.Arcade.Sprite) {
@@ -126,6 +135,7 @@ export class GameScene extends Phaser.Scene {
 
     this.traffic.destroyVehicle(vehicle);
     this.scoring.registerVehicleDestroyed();
+    const basePoints = carModel ? this.scoring.addVehicleBaseScore(carModel) : 0;
     const missionHit = this.missions?.registerHit(carModel, this.scoring);
 
     this.audio?.playHit(kind, 1);
@@ -134,19 +144,21 @@ export class GameScene extends Phaser.Scene {
     this.effects.explosion(x, y, 1);
 
     if (missionHit?.status === "correct") {
-      this.effects.floatingText(x, y - 34, `${this.formatCarModel(carModel)} ${missionHit.mission.progress}/${missionHit.mission.target}`, {
+      this.effects.floatingText(x, y - 34, `${this.formatCarModel(carModel)} +${basePoints} ${missionHit.mission.progress}/${missionHit.mission.target}`, {
         color: "#86efac",
         fontSize: 42,
       });
     } else if (missionHit?.status === "completed") {
       this.effects.missionComplete(missionHit.mission.label, missionHit.awardedScore);
-      this.effects.floatingText(this.scale.width / 2, 278, `MISION COMPLETADA +${missionHit.awardedScore}`, {
+      this.effects.floatingText(this.scale.width / 2, 278, `MISIÓN COMPLETADA +${missionHit.awardedScore}`, {
         color: "#86efac",
         fontSize: 38,
         rise: 64,
       });
-    } else {
-      this.effects.floatingText(x, y - 34, "CADENA ROTA", {
+    } else if (missionHit?.status === "nonTarget") {
+      const vehicleLabel = isPolice ? "POLICIA" : this.formatCarModel(carModel);
+      const label = basePoints > 0 ? `${vehicleLabel} +${basePoints}` : vehicleLabel;
+      this.effects.floatingText(x, y - 34, label, {
         color: isPolice ? "#93c5fd" : "#fb7185",
         fontSize: 40,
       });
@@ -223,22 +235,25 @@ export class GameScene extends Phaser.Scene {
 
   private drawRoad() {
     this.roadTiles = [];
+    const loadedStreets = this.getLoadedStreetAssets();
 
-    if (STREET_ASSETS.some((asset) => !this.textures.exists(asset.key))) {
+    if (loadedStreets.length === 0) {
       this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x171717).setDepth(0);
       return;
     }
 
     let y = 0;
-    STREET_ASSETS.forEach((asset, index) => {
-      const tile = this.add.image(this.scale.width / 2, y, asset.key).setOrigin(0.5, 0).setDepth(0);
-      const source = this.textures.get(asset.key).getSourceImage() as HTMLImageElement;
-      const scale = this.scale.width / source.width;
-      tile.setDisplaySize(this.scale.width, source.height * scale);
-      tile.setData("streetIndex", index);
+    let index = 0;
+
+    while (y < this.scale.height + this.getStreetDisplayHeight(loadedStreets[index % loadedStreets.length])) {
+      const asset = loadedStreets[index % loadedStreets.length];
+      const tile = this.createRoadTile(asset, y);
       this.roadTiles.push(tile);
       y += tile.displayHeight;
-    });
+      index += 1;
+    }
+
+    this.streetRotationIndex = index;
   }
 
   private updateRoad(delta: number) {
@@ -247,12 +262,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     const speed = 220 * (delta / 1000);
+    const loadedStreets = this.getLoadedStreetAssets();
     const topY = () => Math.min(...this.roadTiles.map((tile) => tile.y));
 
     this.roadTiles.forEach((tile) => {
       tile.y += speed;
       if (tile.y >= this.scale.height) {
+        const nextAsset = loadedStreets[this.streetRotationIndex % loadedStreets.length];
+        this.applyRoadTileTexture(tile, nextAsset);
         tile.y = topY() - tile.displayHeight;
+        this.streetRotationIndex += 1;
       }
     });
 
@@ -263,6 +282,62 @@ export class GameScene extends Phaser.Scene {
       }
     });
     this.streetDecorations = this.streetDecorations.filter((decoration) => decoration.active);
+  }
+
+  private getLoadedStreetAssets() {
+    const loaded = STREET_ASSETS.filter((asset) => this.textures.exists(asset.key));
+    return loaded.length > 0 ? loaded : STREET_ASSETS.slice(0, 1);
+  }
+
+  private createRoadTile(asset: GameAsset, y: number) {
+    const tile = this.add.image(this.scale.width / 2, y, asset.key).setOrigin(0.5, 0).setDepth(0);
+    this.applyRoadTileTexture(tile, asset);
+    return tile;
+  }
+
+  private applyRoadTileTexture(tile: Phaser.GameObjects.Image, asset: GameAsset) {
+    if (tile.texture.key !== asset.key) {
+      tile.setTexture(asset.key);
+    }
+
+    const source = this.textures.get(asset.key).getSourceImage() as HTMLImageElement;
+    const scale = this.scale.width / source.width;
+    tile.setDisplaySize(this.scale.width, source.height * scale);
+    tile.setData("streetKey", asset.key);
+  }
+
+  private getStreetDisplayHeight(asset: GameAsset) {
+    const source = this.textures.get(asset.key).getSourceImage() as HTMLImageElement;
+    const scale = this.scale.width / source.width;
+    return source.height * scale;
+  }
+
+  private loadBackgroundStreetAssets() {
+    if (this.backgroundStreetLoadStarted) {
+      return;
+    }
+
+    const pendingAssets = BACKGROUND_STREET_ASSETS.filter((asset) => !this.textures.exists(asset.key));
+    if (pendingAssets.length === 0) {
+      return;
+    }
+
+    this.backgroundStreetLoadStarted = true;
+    const startedAtMs = performance.now();
+    pendingAssets.forEach((asset) => this.load.image(asset.key, asset.path));
+    this.load.once("complete", () => {
+      console.info(`[LOAD] Background streets loaded ${pendingAssets.length} assets in ${Math.round(performance.now() - startedAtMs)}ms`);
+    });
+    this.load.start();
+  }
+
+  private logCreateTiming() {
+    const preloadStartedAtMs = this.registry.get("laBestia:minimalPreloadStartedAtMs");
+    if (typeof preloadStartedAtMs !== "number") {
+      return;
+    }
+
+    console.info(`[LOAD] GameScene.create after ${Math.round(performance.now() - preloadStartedAtMs)}ms`);
   }
 
   private updateWomanStreetEvent(time: number) {

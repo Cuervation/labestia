@@ -18,7 +18,7 @@ export class GameStateSystem {
     const titleText = scene.add
       .text(centerX, centerY - 118, "PREPARADO PARA\nROMPER TODO", {
         color: "#fff7ed",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Russo One, Arial, sans-serif",
         fontSize: "38px",
         fontStyle: "bold",
         align: "center",
@@ -32,7 +32,7 @@ export class GameStateSystem {
     this.countdownText = scene.add
       .text(centerX, centerY - 24, "3", {
         color: "#facc15",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Teko, Arial, sans-serif",
         fontSize: "118px",
         fontStyle: "bold",
         stroke: "#7f1d1d",
@@ -44,7 +44,7 @@ export class GameStateSystem {
     const hintText = scene.add
       .text(centerX, centerY + 96, "Chocá todo en 90 segundos", {
         color: "#fff7ed",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Russo One, Arial, sans-serif",
         fontSize: "30px",
         fontStyle: "bold",
         stroke: "#111111",

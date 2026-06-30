@@ -1,4 +1,5 @@
 import { GAME_BALANCE, type DifficultyLevel } from "../config/balance";
+import type { CarModel } from "../types";
 
 export class ScoringSystem {
   score = 0;
@@ -6,6 +7,7 @@ export class ScoringSystem {
   autosDestroyed = 0;
   private finished = false;
   private elapsedMs = 0;
+  private startedAtMs: number | null = null;
 
   get remainingSeconds() {
     return Math.max(0, GAME_BALANCE.durationSeconds - this.elapsedSeconds);
@@ -15,12 +17,29 @@ export class ScoringSystem {
     return this.elapsedMs / 1000;
   }
 
-  update(deltaMs: number) {
+  get started() {
+    return this.startedAtMs !== null;
+  }
+
+  start(nowMs = performance.now()) {
+    if (this.startedAtMs !== null) {
+      return;
+    }
+
+    this.startedAtMs = nowMs;
+    this.elapsedMs = 0;
+  }
+
+  update(nowMs = performance.now()) {
     if (this.finished) {
       return;
     }
 
-    this.elapsedMs += deltaMs;
+    if (this.startedAtMs === null) {
+      return;
+    }
+
+    this.elapsedMs = Math.max(0, nowMs - this.startedAtMs);
 
     if (this.remainingSeconds <= 0) {
       this.finished = true;
@@ -29,6 +48,12 @@ export class ScoringSystem {
 
   registerVehicleDestroyed() {
     this.autosDestroyed += 1;
+  }
+
+  addVehicleBaseScore(carModel: CarModel) {
+    const points = GAME_BALANCE.score[carModel];
+    this.score += points;
+    return points;
   }
 
   addMissionScore(points: number) {

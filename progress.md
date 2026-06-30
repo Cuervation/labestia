@@ -143,3 +143,19 @@
 - Refactor scoring in progress: replaced old temporal combo/Bestia/rider mission scoring with one active random perfect-sequence mission and x10 completion scoring. Pending typecheck/build/smoke.
 
 - Refactor scoring validated: npm run typecheck and npm run build passed; browser smoke showed active random mission in HUD and MissionSystem browser check verified correct progress, wrong hit reset, completion score subtotal*x10, and new mission generation.
+
+- Timer fix in progress: ScoringSystem now starts from performance.now when countdown reaches running and computes elapsed from real time instead of Phaser delta.
+
+- Timer fix validated: npm run typecheck and npm run build passed; ScoringSystem browser check confirmed no elapsed before start, 20s real-time skip lowers timer to 70s, >90s marks finished; /play smoke confirmed timer drops after running.
+
+- Cache optimization: added Firebase Hosting cache headers, Home idle preload for critical game images, and lazy MP3 loading with preload=none. Validated firebase.json JSON, npm run typecheck, npm run build, and Playwright smoke: MP3 not loaded on home, all 12 critical assets preloaded, /play canvas mounts, no console errors.
+
+- Startup optimization validated: Home -> /play now supports same-document navigation, BootScene loads only 13 critical assets, GameScene creates only visible road tiles from loaded streets, and street_003-street_011 load in background. Validated npm run typecheck, npm run build, Playwright smoke for /play direct/internal navigation, visual screenshots, and restart overlay remount.
+
+- Startup optimization follow-up: Layout header links now use the same internal navigate helper, so hidden/desktop nav links also avoid full document reload. Final smoke confirmed same-document marker persisted, /play direct loaded one canvas, restart left one canvas and no overlay, and [LOAD] logs showed GameScene.create before background streets completed.
+
+- Mission scoring rule update: base points now add to score for every modeled car hit; target hits also advance mission progress/subtotal; non-target hits keep current progress/subtotal and return nonTarget instead of broken; CADENA ROTA feedback removed. Validated npm run typecheck, npm run build, direct browser module test for MissionSystem/ScoringSystem, and /play smoke screenshot.
+
+- Traffic safety update: added safePassageWindowPx/maxBlockedLanesInWindow/spawnSkipIfNoSafeLane to GAME_BALANCE.traffic; TrafficSystem now picks lanes with guaranteed passage, skips spawn if it would block all 3 lanes, and enforces the invariant during update by removing the newest blocker if convergence creates a 3-lane wall. Validated npm run typecheck, npm run build, Playwright smoke screenshot, virtual no-wall sampling, and direct helper tests for skip/allow/enforce behavior.
+
+- Local font pass: downloaded self-hosted TTFs for Bungee, Luckiest Guy, Teko SemiBold, Russo One, and Press Start 2P into public/assets/fonts; moved Another Danger references to the same lowercase fonts path; added src/styles/fonts.css with font-display: swap. Applied Bungee to main buttons, Luckiest Guy to mission/HUD objective text, Teko to HUD numeric/floating text, Russo One to panels/ranking/game over, and Press Start 2P to BootScene loading. Validated npm run typecheck, npm run build, Playwright screenshots for home/play/gameover/ranking, local font requests, and zero Google Fonts runtime requests.

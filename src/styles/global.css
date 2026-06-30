@@ -1,6 +1,8 @@
+@import "./fonts.css";
+
 :root {
   color-scheme: dark;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Russo One", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #0b0b0d;
   color: #fff7ed;
   --bg: #0b0b0d;
@@ -11,14 +13,6 @@
   --red-soft: #7f1d1d;
   --yellow: #facc15;
   --white: #fff7ed;
-}
-
-@font-face {
-  font-family: "Another Danger";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/assets/Fonts/Another%20Danger%20Slanted.otf") format("opentype");
 }
 
 * {
@@ -65,8 +59,9 @@ button,
   border-radius: 999px;
   cursor: pointer;
   display: inline-flex;
-  font: inherit;
-  font-weight: 800;
+  font-family: "Bungee", Impact, sans-serif;
+  font-size: inherit;
+  font-weight: 400;
   justify-content: center;
   min-height: 44px;
   padding: 0.8rem 1.2rem;
@@ -121,8 +116,9 @@ button:disabled {
 
 .brand {
   color: var(--yellow);
+  font-family: "Another Danger", Impact, Haettenschweiler, "Arial Black", sans-serif;
   font-size: 1.1rem;
-  font-weight: 900;
+  font-weight: 400;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -139,7 +135,8 @@ button:disabled {
 
 .nav-links a {
   color: rgba(255, 247, 237, 0.86);
-  font-weight: 700;
+  font-family: "Bungee", Impact, sans-serif;
+  font-weight: 400;
 }
 
 .page-shell {
@@ -184,6 +181,7 @@ button:disabled {
 
 .page-heading h1,
 .hero-copy h1 {
+  font-family: "Another Danger", Impact, Haettenschweiler, "Arial Black", sans-serif;
   font-size: clamp(3rem, 10vw, 6.5rem);
   line-height: 0.9;
   margin: 0;
@@ -194,7 +192,8 @@ button:disabled {
   color: var(--yellow);
   display: inline-block;
   font-size: 0.8rem;
-  font-weight: 900;
+  font-family: "Russo One", Arial, sans-serif;
+  font-weight: 400;
   letter-spacing: 0.18em;
   margin-bottom: 0.5rem;
   text-transform: uppercase;
@@ -305,10 +304,10 @@ button:disabled {
     0 12px 24px rgba(0, 0, 0, 0.34);
   color: #fff7ed;
   display: inline-flex;
-  font-family: "Another Danger", Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Bungee", Impact, sans-serif;
   font-size: 1.1rem;
   font-style: normal;
-  font-weight: 900;
+  font-weight: 400;
   justify-content: center;
   letter-spacing: 0.03em;
   min-height: 0;
@@ -384,10 +383,10 @@ button:disabled {
   color: #fff7ed;
   display: inline-flex;
   filter: saturate(1.06);
-  font-family: "Another Danger", Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Bungee", Impact, sans-serif;
   font-size: clamp(1.45rem, 9.8vw, 2.8rem);
   font-style: normal;
-  font-weight: 950;
+  font-weight: 400;
   justify-content: center;
   left: 50%;
   letter-spacing: 0.06em;
@@ -418,6 +417,7 @@ button:disabled {
     0 12px 28px rgba(0, 0, 0, 0.45);
   color: #18181b;
   display: inline-flex;
+  font-family: "Bungee", Impact, sans-serif;
   gap: 0.6rem;
   justify-content: center;
   left: 50%;
@@ -693,11 +693,12 @@ button:disabled {
     0 0 0 4px rgba(0, 0, 0, 0.68),
     0 22px 48px rgba(0, 0, 0, 0.55);
   color: #fff7ed;
+  font-family: "Russo One", Arial, sans-serif;
 }
 
 .game-over-panel .panel-header h2 {
   color: #fff7ed;
-  font-family: "Another Danger", Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Russo One", Arial, sans-serif;
   letter-spacing: 0.06em;
 }
 
@@ -715,14 +716,15 @@ button:disabled {
 .game-over-score span {
   color: rgba(255, 247, 237, 0.74);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-family: "Russo One", Arial, sans-serif;
+  font-weight: 400;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .game-over-score strong {
   color: var(--yellow);
-  font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Teko", Arial, sans-serif;
   font-size: clamp(2rem, 8vw, 3.2rem);
   letter-spacing: 0.06em;
   line-height: 1;
@@ -745,7 +747,7 @@ button:disabled {
     0 12px 24px rgba(0, 0, 0, 0.34);
   color: #fff7ed;
   display: inline-flex;
-  font-family: "Another Danger", Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Bungee", Impact, sans-serif;
   font-size: 1.05rem;
   justify-content: center;
   letter-spacing: 0.05em;
@@ -805,7 +807,7 @@ button:disabled {
 
 .table-shell--compact .arcade-table th {
   color: #fff7ed;
-  font-family: "Another Danger", Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Russo One", Arial, sans-serif;
   font-size: 0.9rem;
   letter-spacing: 0.05em;
   padding: 0.2rem 0.35rem;
@@ -817,7 +819,7 @@ button:disabled {
   border-bottom: 0;
   border-top: 2px solid rgba(255, 247, 237, 0.78);
   color: #fff7ed;
-  font-family: "Another Danger", Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Russo One", Arial, sans-serif;
   font-size: 0.92rem;
   letter-spacing: 0.04em;
   overflow: hidden;
@@ -829,7 +831,7 @@ button:disabled {
 }
 
 .table-shell--compact .arcade-table td:nth-child(2) {
-  font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Russo One", Arial, sans-serif;
 }
 
 .table-shell--compact .arcade-table th:first-child,
@@ -850,7 +852,7 @@ button:disabled {
 
 .table-shell--compact .arcade-table td:first-child,
 .table-shell--compact .arcade-table td:last-child {
-  font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Teko", Arial, sans-serif;
   font-size: 1rem;
   letter-spacing: 0.02em;
 }
@@ -875,6 +877,7 @@ button:disabled {
 .arcade-table thead th {
   color: #fff7ed;
   font-size: 0.82rem;
+  font-family: "Russo One", Arial, sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -906,6 +909,7 @@ button:disabled {
 
 .stat-card strong {
   color: var(--yellow);
+  font-family: "Teko", Arial, sans-serif;
   font-size: 1.5rem;
 }
 
@@ -928,7 +932,8 @@ button:disabled {
   color: #fff7ed;
   display: inline-flex;
   font-size: 0.84rem;
-  font-weight: 900;
+  font-family: "Russo One", Arial, sans-serif;
+  font-weight: 400;
   letter-spacing: 0.06em;
   padding: 0.45rem 0.7rem;
   text-transform: uppercase;
@@ -963,6 +968,7 @@ button:disabled {
   border-radius: 1rem;
   box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.72), 0 18px 40px rgba(0, 0, 0, 0.58);
   color: #fff7ed;
+  font-family: "Russo One", Arial, sans-serif;
   max-height: calc(100% - 2rem);
   max-width: min(24rem, 100%);
   overflow-y: auto;
@@ -979,7 +985,7 @@ button:disabled {
 
 .ranking-popup-header h2 {
   color: #fff7ed;
-  font-family: "Another Danger", Impact, Haettenschweiler, "Arial Black", sans-serif;
+  font-family: "Russo One", Arial, sans-serif;
   letter-spacing: 0.08em;
   margin: 0;
   text-transform: uppercase;
@@ -993,6 +999,7 @@ button:disabled {
     0 0 0 3px rgba(0, 0, 0, 0.58),
     0 12px 24px rgba(0, 0, 0, 0.34);
   color: #fff7ed;
+  font-family: "Bungee", Impact, sans-serif;
   font-size: 1.6rem;
   font-weight: 900;
   line-height: 1;
@@ -1152,3 +1159,4 @@ button:disabled {
     width: 5.6rem;
   }
 }
+

@@ -17,13 +17,12 @@ export class MissionSystem {
 
   registerHit(carModel: CarModel | undefined, scoring: ScoringSystem): MissionHitResult {
     if (carModel !== this.activeMission.model) {
-      this.progress = 0;
-      this.subtotal = 0;
       return {
-        status: "broken",
+        status: "nonTarget",
         mission: this.getSnapshot(),
         expectedModel: this.activeMission.model,
         actualModel: carModel,
+        basePoints: carModel ? GAME_BALANCE.score[carModel] : undefined,
         awardedScore: 0,
       };
     }
