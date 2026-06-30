@@ -17,6 +17,7 @@ export const ASSET_KEYS = {
   riderOsky: "rider-osky",
   riderGaston: "rider-gaston",
   woman: "woman",
+  hudTopFrame: "hud-top-frame",
 } as const;
 
 export type AssetKey = (typeof ASSET_KEYS)[keyof typeof ASSET_KEYS];
@@ -103,6 +104,10 @@ export const ASSET_MANIFEST = [
   {
     key: ASSET_KEYS.woman,
     path: "/assets/mujer.png",
+  },
+  {
+    key: ASSET_KEYS.hudTopFrame,
+    path: "/assets/hud/top-hud-frame.png",
   },
   ...STREET_ASSETS,
 ] as const;

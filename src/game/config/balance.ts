@@ -170,6 +170,8 @@ export const GAME_BALANCE = {
     womanMaxY: 760,
     womanLeftX: 175,
     womanRightX: 545,
+    womanMinIntervalMs: 10000,
+    womanMaxIntervalMs: 15000,
     dialogMs: 1650,
   },
 } as const;

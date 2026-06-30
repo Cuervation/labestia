@@ -17,6 +17,7 @@ export class GameScene extends Phaser.Scene {
   private gameOverSent = false;
   private smokeAccumulatorMs = 0;
   private simulatedTime = 0;
+  private nextWomanEventAt = 0;
   private roadTiles: Phaser.GameObjects.Image[] = [];
   private streetDecorations: Phaser.GameObjects.Image[] = [];
   private whistleDialog?: {
@@ -33,6 +34,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#111111");
     this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
     this.simulatedTime = this.time.now;
+    this.scheduleNextWomanStreetEvent(this.simulatedTime);
 
     this.drawRoad();
 
@@ -111,6 +113,7 @@ export class GameScene extends Phaser.Scene {
     this.scoring.update(delta);
     this.missions.update(this.scoring.elapsedSeconds * 1000);
     this.updateRoad(delta);
+    this.updateWomanStreetEvent(time);
     this.player.update(time, this.scoring.getPlayerSpeedMultiplier(), this.isWhistleDialogActive(time));
     this.traffic.update(time, this.scoring.getDifficulty());
     this.riders.update(time);
@@ -339,9 +342,6 @@ export class GameScene extends Phaser.Scene {
       tile.y += speed;
       if (tile.y >= this.scale.height) {
         tile.y = topY() - tile.displayHeight;
-        if (tile.getData("streetIndex") === STREET_ASSETS.length - 1) {
-          this.spawnWomanStreetEvent();
-        }
       }
     });
 
@@ -352,6 +352,24 @@ export class GameScene extends Phaser.Scene {
       }
     });
     this.streetDecorations = this.streetDecorations.filter((decoration) => decoration.active);
+  }
+
+  private updateWomanStreetEvent(time: number) {
+    if (time < this.nextWomanEventAt) {
+      return;
+    }
+
+    this.spawnWomanStreetEvent();
+    this.scheduleNextWomanStreetEvent(time);
+  }
+
+  private scheduleNextWomanStreetEvent(fromTime: number) {
+    this.nextWomanEventAt =
+      fromTime +
+      Phaser.Math.Between(
+        GAME_BALANCE.streetEvents.womanMinIntervalMs,
+        GAME_BALANCE.streetEvents.womanMaxIntervalMs,
+      );
   }
 
   private spawnWomanStreetEvent() {

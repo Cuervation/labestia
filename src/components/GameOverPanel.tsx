@@ -35,6 +35,9 @@ export function GameOverPanel({
         <button className="game-over-button game-over-button--secondary" type="button" onClick={onShowRanking}>
           Ver ranking
         </button>
+        <a className="game-over-button game-over-button--exit" href="/">
+          Salir
+        </a>
       </div>
     </div>
   );

@@ -137,3 +137,5 @@
 - Production polish: moved the FIUUUU dialog to the player's front driver-window area and kept it following La Bestia while visible.
 - Production polish: compact ranking popup now shows only POS/JUGADOR/PUNTAJE, with button-like arcade styling and numeric columns using a legible font so scores render correctly.
 - Validation: npm run typecheck and npm run build passed; Playwright smoke verified /play, mujer visibility, FIUUUU bubble screenshot, and ranking popup score visibility.
+
+- HUD QA: detected top-hud-frame.png has transparent top padding (alpha bbox starts at y=198), so moved Phaser HUD group up with topOffset -66 and shifted timer/score left to avoid clipping.

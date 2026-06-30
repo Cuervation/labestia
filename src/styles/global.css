@@ -536,14 +536,15 @@ button:disabled {
 }
 
 .play-screen {
-  align-items: center;
+  align-items: start;
   background: #050505;
   grid-template-columns: minmax(0, 430px);
   inset: 0;
   margin: 0;
   max-width: none;
   min-height: 100vh;
-  padding: 1rem;
+  padding: 0;
+  justify-items: center;
   position: fixed;
   width: 100%;
   z-index: 30;
@@ -675,6 +676,7 @@ button:disabled {
 
 .game-over-overlay .game-over-panel {
   max-height: calc(100% - 2rem);
+  max-width: min(23rem, 100%);
   overflow-y: auto;
   width: 100%;
 }
@@ -725,7 +727,7 @@ button:disabled {
 .game-over-actions {
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   margin-top: 1rem;
 }
 
@@ -754,6 +756,10 @@ button:disabled {
 
 .game-over-button--secondary {
   background: linear-gradient(180deg, rgba(28, 65, 140, 0.97), rgba(12, 28, 78, 0.97));
+}
+
+.game-over-button--exit {
+  background: linear-gradient(180deg, rgba(39, 39, 42, 0.98), rgba(12, 12, 14, 0.98));
 }
 
 .game-over-button:hover {
@@ -1042,6 +1048,28 @@ button:disabled {
 @media (max-width: 640px) {
   .page-shell {
     padding: 0;
+  }
+
+  .page-shell:has(.cover-screen) {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .cover-screen {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .cover-frame {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    height: 100dvh;
+    width: 100vw;
+  }
+
+  .cover-image {
+    object-fit: cover;
   }
 
   .page-shell:has(.play-screen) {
