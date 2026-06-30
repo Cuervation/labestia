@@ -155,9 +155,10 @@ export class GameScene extends Phaser.Scene {
         fontSize: 38,
         rise: 64,
       });
-    } else if (missionHit?.status === "nonTarget") {
+    } else if (missionHit?.status === "broken") {
       const vehicleLabel = isPolice ? "POLICIA" : this.formatCarModel(carModel);
-      const label = basePoints > 0 ? `${vehicleLabel} +${basePoints}` : vehicleLabel;
+      const brokeActiveChain = missionHit.chainWasActive === true;
+      const label = basePoints > 0 ? `${vehicleLabel} +${basePoints}${brokeActiveChain ? " CADENA CORTADA" : ""}` : vehicleLabel;
       this.effects.floatingText(x, y - 34, label, {
         color: isPolice ? "#93c5fd" : "#fb7185",
         fontSize: 40,

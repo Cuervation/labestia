@@ -13,7 +13,7 @@ export type MissionSnapshot = {
   subtotal: number;
 };
 
-export type MissionHitStatus = "correct" | "nonTarget" | "completed";
+export type MissionHitStatus = "correct" | "broken" | "completed";
 
 export type MissionHitResult = {
   status: MissionHitStatus;
@@ -22,6 +22,7 @@ export type MissionHitResult = {
   actualModel?: CarModel;
   basePoints?: number;
   awardedScore: number;
+  chainWasActive?: boolean;
 };
 
 declare global {
