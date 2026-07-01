@@ -169,3 +169,25 @@
 - Traffic Director refinement: TrafficSystem now builds safe spawn lanes before choosing, rejects same-lane spawns that are too close, blocks fast catch-up behind slower cars unless the gap is large, weights safe lanes by player pressure/starvation/variety, and caps speed behind slower traffic when needed. Validated with `npm run typecheck` plus direct helper simulation for unsafe lane rejection, catch-up, full-block walls, and safe stagger. No build run per current AGENTS instruction.
 
 - SuperJackpot mode: replaced visible random model missions with a final 20s SuperJackpot objective. The HUD now shows SuperJackpot progress 0/50 and prize x2; TrafficSystem schedules 50 final-phase spawns at 400ms intervals with police chance included; hitting 50 vehicles during the phase doubles the current score through ScoringSystem.multiplyScore. Validated npm run typecheck, direct timing check for 50 spawns over 20s, direct x2 score check, and grep confirmed old mission/combo strings are gone. No build run per current AGENTS instruction.
+
+- SuperJackpot 60s revision: changed game duration to 60 seconds, kept a single mission active for the whole run, and doubled traffic speed globally for more difficulty. SuperJackpot remains the only visible objective and still doubles current score on completion. Validated with npm run typecheck; build/deploy remain blocked by the repo instruction not to run build after changes.
+
+- Latest tuning: SuperJackpot target increased to 55 cars across the full 60s run, spawn cadence retuned to keep the objective spread across the whole match, and lane-change volantazo speed doubled again by halving the base lane-change duration to 70ms. Pending: typecheck smoke after the balance update.
+
+- Follow-up fix: the visible world scroll was still using a hardcoded 220px/s, so the facades felt unchanged. Updated road scroll speed to derive from player base speed * 2, which makes the whole run feel faster in motion as requested.
+
+- SuperJackpot scale-up: doubled the total target to 110 cars and halved the spawn interval so the objective density matches the new count across the same 60s run. Pending validation: typecheck and in-game pacing check.
+
+- UI change: SuperJackpot HUD no longer shows numeric progress or prize text. It now displays only the word SUPERJACKPOT as segmented letters that light up progressively, and the game-over panel no longer repeats SuperJackpot progress.
+
+- Balance correction: SuperJackpot target restored to 60 cars and spawn cadence normalized back to 1s so the objective reads cleanly as a full-run target instead of an inflated count.
+
+- Balance tweak: increased SuperJackpot cars by 10% (60 -> 66) and police chance by 20% relative (0.24 -> 0.288) to make the full-run objective denser without changing the mode structure.
+
+- HUD tweak: restored SuperJackpot numeric progress text below the segmented label while keeping the word-as-bar visual treatment.
+
+- Balance reset: returned match duration to 90 seconds and retuned SuperJackpot to 58 total captures (cars + police), with a slower spawn cadence so the total lands in the requested 55-60 window across the whole run.
+
+- Correction: SuperJackpot progress now counts only non-police car captures. Police still spawn and score, but they do not advance the 55-60 target.
+
+- Spawn bugfix: the SuperJackpot traffic generator was counting police spawns against the quota, which starved the real car count. Switched the traffic-side counter to track cars and police separately, and shortened the spawn interval so 58 cars can actually appear within 90 seconds.

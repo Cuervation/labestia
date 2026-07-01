@@ -2,10 +2,11 @@ import type { CarModel } from "../types";
 
 export const GAME_BALANCE = {
   durationSeconds: 90,
-  policeTurnLockDurationMs: 5000,
+  policeTurnLockDurationMs: 2500,
   difficulty: {
     mediumAfterSeconds: 25,
     chaosAfterSeconds: 60,
+    superChaosAfterSeconds: 30,
   },
   start: {
     countdownStepMs: 760,
@@ -27,11 +28,11 @@ export const GAME_BALANCE = {
     eco: 120,
   } satisfies Record<CarModel, number>,
   superJackpot: {
-    startsAtRemainingSeconds: 20,
-    targetCars: 50,
+    startsAtRemainingSeconds: 90,
+    targetCars: 58,
     scoreMultiplier: 2,
-    spawnEveryMs: 400,
-    policeChance: 0.24,
+    spawnEveryMs: 1100,
+    policeChance: 0.72,
   },
   player: {
     baseSpeed: 395,
@@ -40,7 +41,7 @@ export const GAME_BALANCE = {
     height: 430,
     minX: 210,
     maxX: 510,
-    laneChangeDurationMs: 140,
+    laneChangeDurationMs: 70,
     laneChangeCooldownMs: 80,
   },
   traffic: {
@@ -67,6 +68,7 @@ export const GAME_BALANCE = {
     spawnRetryCount: 3,
     minSpawnYGapPx: 220,
     spawnSkipIfNoSafeLane: true,
+    globalSpeedMultiplier: 2,
     playerLaneThreatWeight: 80,
     adjacentLaneThreatWeight: 50,
     farLaneThreatWeight: 25,
@@ -77,7 +79,7 @@ export const GAME_BALANCE = {
       spawnEveryMs: 920,
       minSpeed: 160,
       maxSpeed: 225,
-      policeChance: 0.03,
+      policeChance: 0.075,
       modelWeights: {
         peugeot: 34,
         chery: 28,
@@ -90,7 +92,7 @@ export const GAME_BALANCE = {
       spawnEveryMs: 640,
       minSpeed: 225,
       maxSpeed: 330,
-      policeChance: 0.1,
+      policeChance: 0.25,
       modelWeights: {
         peugeot: 28,
         chery: 26,
@@ -103,13 +105,26 @@ export const GAME_BALANCE = {
       spawnEveryMs: 430,
       minSpeed: 315,
       maxSpeed: 455,
-      policeChance: 0.18,
+      policeChance: 0.45,
       modelWeights: {
         peugeot: 22,
         chery: 24,
         meriva: 18,
         focus: 22,
         eco: 14,
+      },
+    },
+    superChaos: {
+      spawnEveryMs: 280,
+      minSpeed: 400,
+      maxSpeed: 500,
+      policeChance: 0.45,
+      modelWeights: {
+        peugeot: 18,
+        chery: 22,
+        meriva: 20,
+        focus: 24,
+        eco: 16,
       },
     },
   },

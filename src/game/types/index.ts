@@ -14,7 +14,7 @@ export type SuperJackpotSnapshot = {
   subtotal: number;
 };
 
-export type SuperJackpotHitStatus = "inactive" | "progress" | "completed";
+export type SuperJackpotHitStatus = "inactive" | "progress" | "bonus";
 
 export type SuperJackpotHitResult = {
   status: SuperJackpotHitStatus;

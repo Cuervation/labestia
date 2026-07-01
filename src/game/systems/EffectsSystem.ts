@@ -149,7 +149,6 @@ export class EffectsSystem {
   gameOverOverlay(
     score: number,
     carsDestroyed: number,
-    missionSummary?: string,
     endTitle = "La Bestia",
   ) {
     this.clearTransientObjects();
@@ -168,9 +167,7 @@ export class EffectsSystem {
       })
       .setOrigin(0.5)
       .setDepth(120);
-    const statsText = `${endTitle.toUpperCase()}\nPUNTAJE ${score}\nAUTOS ${carsDestroyed}${
-      missionSummary ? `\nSUPERJACKPOT ${missionSummary}` : ""
-    }`;
+    const statsText = `${endTitle.toUpperCase()}\nPUNTAJE ${score}\nAUTOS ${carsDestroyed}`;
     const stats = this.scene.add
       .text(centerX, centerY - 24, statsText, {
         align: "center",

@@ -3,21 +3,17 @@ import type { SuperJackpotHitResult, SuperJackpotSnapshot } from "../types";
 import type { ScoringSystem } from "./ScoringSystem";
 
 export class MissionSystem {
-  private active = false;
-  private completed = false;
+  private active = true;
   private progress = 0;
+  private bonusHits = 0;
   private awardedScore = 0;
 
   update(remainingSeconds: number) {
-    if (this.active) {
-      return;
-    }
-
     this.active = remainingSeconds <= GAME_BALANCE.superJackpot.startsAtRemainingSeconds;
   }
 
-  registerHit(scoring: ScoringSystem): SuperJackpotHitResult {
-    if (!this.active || this.completed) {
+  registerHit(scoring: ScoringSystem, countsTowardTarget: boolean): SuperJackpotHitResult {
+    if (!this.active) {
       return {
         status: "inactive",
         snapshot: this.getSnapshot(),
@@ -25,9 +21,17 @@ export class MissionSystem {
       };
     }
 
-    this.progress = Math.min(this.progress + 1, GAME_BALANCE.superJackpot.targetCars);
+    if (!countsTowardTarget) {
+      return {
+        status: "inactive",
+        snapshot: this.getSnapshot(),
+        awardedScore: 0,
+      };
+    }
 
-    if (this.progress < GAME_BALANCE.superJackpot.targetCars) {
+    this.progress += 1;
+
+    if (this.progress <= GAME_BALANCE.superJackpot.targetCars) {
       return {
         status: "progress",
         snapshot: this.getSnapshot(),
@@ -35,11 +39,12 @@ export class MissionSystem {
       };
     }
 
-    this.completed = true;
-    this.awardedScore = scoring.multiplyScore(GAME_BALANCE.superJackpot.scoreMultiplier);
+    this.bonusHits += 1;
+    const multiplier = GAME_BALANCE.superJackpot.scoreMultiplier + this.bonusHits - 1;
+    this.awardedScore = scoring.multiplyScore(multiplier);
 
     return {
-      status: "completed",
+      status: "bonus",
       snapshot: this.getSnapshot(),
       awardedScore: this.awardedScore,
     };
@@ -54,7 +59,7 @@ export class MissionSystem {
   }
 
   isCompleted() {
-    return this.completed;
+    return this.progress > GAME_BALANCE.superJackpot.targetCars;
   }
 
   getRemainingTargets() {
@@ -62,26 +67,26 @@ export class MissionSystem {
   }
 
   getCompletedCount() {
-    return this.completed ? 1 : 0;
+    return this.bonusHits;
   }
 
   getTotalCount() {
-    return 1;
+    return Math.max(1, this.progress);
   }
 
   getEndTitle() {
-    return this.completed ? "SuperJackpot" : "La Bestia";
+    return this.progress > GAME_BALANCE.superJackpot.targetCars ? "SuperJackpot" : "La Bestia";
   }
 
   private getSnapshot(): SuperJackpotSnapshot {
     return {
       id: "super-jackpot",
-      label: this.active ? "SUPERJACKPOT" : "SUPERJACKPOT EN 0:20",
+      label: "SUPERJACKPOT",
       progress: this.progress,
       target: GAME_BALANCE.superJackpot.targetCars,
       multiplier: GAME_BALANCE.superJackpot.scoreMultiplier,
       active: this.active,
-      completed: this.completed,
+      completed: this.progress > GAME_BALANCE.superJackpot.targetCars,
       subtotal: this.awardedScore,
     };
   }

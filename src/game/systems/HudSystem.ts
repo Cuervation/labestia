@@ -12,7 +12,8 @@ export class HudSystem {
   private readonly difficultyText: HudText;
   private readonly hintText: HudText;
   private readonly superJackpotPanel: Phaser.GameObjects.Graphics;
-  private readonly superJackpotTexts: HudText[];
+  private readonly superJackpotLetters: HudText[] = [];
+  private readonly superJackpotProgressText: HudText;
 
   constructor(scene: Phaser.Scene) {
     this.addTopFrame(scene);
@@ -39,18 +40,37 @@ export class HudSystem {
         wordWrap: { width: scene.scale.width - 48 },
       })
       .setOrigin(0.5, 0);
-    this.superJackpotTexts = [
-      scene.add.text(40, 194 + this.topOffset, "", this.style("#fff7ed", 19, "Luckiest Guy, Impact, sans-serif")),
-      scene.add.text(40, 232 + this.topOffset, "", this.style("#fff7ed", 27, "Teko, Arial, sans-serif")),
-      scene.add.text(40, 270 + this.topOffset, "", this.style("#fff7ed", 19, "Luckiest Guy, Impact, sans-serif")),
-    ];
+    const label = "SUPERJACKPOT";
+    const startX = 40;
+    let cursorX = startX;
+    for (const char of label) {
+      const text = scene.add.text(cursorX, 238 + this.topOffset, char, {
+        color: "#7f1d1d",
+        fontFamily: "Luckiest Guy, Impact, sans-serif",
+        fontSize: "28px",
+        fontStyle: "bold",
+        stroke: "#111111",
+        strokeThickness: 4,
+      });
+      text.setOrigin(0, 0.5);
+      text.setScrollFactor(0);
+      text.setDepth(100);
+      this.superJackpotLetters.push(text);
+      cursorX += char === "J" ? 24 : char === "P" ? 22 : 20;
+    }
+    this.superJackpotProgressText = scene.add
+      .text(40, 276 + this.topOffset, "", this.style("#fff7ed", 18, "Teko, Arial, sans-serif"))
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0)
+      .setDepth(100);
 
     [
       this.scoreText,
       this.timerText,
       this.difficultyText,
       this.hintText,
-      ...this.superJackpotTexts,
+      ...this.superJackpotLetters,
+      this.superJackpotProgressText,
     ].forEach((text) => {
       text.setScrollFactor(0);
       text.setDepth(100);
@@ -114,7 +134,8 @@ export class HudSystem {
   private updateSuperJackpot(jackpot?: SuperJackpotSnapshot) {
     if (!jackpot) {
       this.superJackpotPanel.clear();
-      this.superJackpotTexts.forEach((text) => text.setText(""));
+      this.superJackpotLetters.forEach((text) => text.setText(" "));
+      this.superJackpotProgressText.setText("");
       return;
     }
 
@@ -124,12 +145,24 @@ export class HudSystem {
     this.superJackpotPanel.lineStyle(2, jackpot.active ? 0xf97316 : 0xfacc15, jackpot.active ? 0.7 : 0.35);
     this.superJackpotPanel.strokeRoundedRect(16, 176 + this.topOffset, 374, 128, 12);
 
-    this.superJackpotTexts[0].setText(jackpot.label);
-    this.superJackpotTexts[0].setColor(jackpot.active ? "#fb923c" : "#facc15");
-    this.superJackpotTexts[1].setText(`PROGRESO: ${jackpot.progress}/${jackpot.target}`);
-    this.superJackpotTexts[1].setColor(jackpot.completed ? "#86efac" : "#fff7ed");
-    this.superJackpotTexts[2].setText(`PREMIO: x${jackpot.multiplier} PUNTAJE`);
-    this.superJackpotTexts[2].setColor("#86efac");
+    const progressRatio = jackpot.target > 0 ? Phaser.Math.Clamp(jackpot.progress / jackpot.target, 0, 1) : 0;
+    this.superJackpotLetters.forEach((letter, index) => {
+      const revealedCount = Math.floor(progressRatio * this.superJackpotLetters.length);
+      const isLit = index <= revealedCount - 1;
+      const isFinal = jackpot.completed;
+      letter.setColor(
+        isFinal
+          ? "#86efac"
+          : isLit
+            ? jackpot.active
+              ? "#facc15"
+              : "#fb923c"
+            : "#7f1d1d",
+      );
+      letter.setAlpha(isLit || isFinal ? 1 : 0.38);
+    });
+    this.superJackpotProgressText.setText(`PROGRESO ${jackpot.progress}/${jackpot.target}`);
+    this.superJackpotProgressText.setColor(jackpot.completed ? "#86efac" : "#fff7ed");
   }
 
   private formatTime(seconds: number) {

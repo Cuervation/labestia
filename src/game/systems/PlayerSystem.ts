@@ -19,6 +19,7 @@ export class PlayerSystem {
     toX: number;
     startedAt: number;
     endsAt: number;
+    durationMs: number;
   };
   private laneChangeCooldownUntil = 0;
   private readonly handleKeyDown = (event: KeyboardEvent) => {
@@ -64,6 +65,7 @@ export class PlayerSystem {
   }
 
   update(time: number, speedMultiplier: number, invertHorizontalInput = false) {
+    const effectiveSpeedMultiplier = Math.max(1, speedMultiplier);
     let direction = this.touchDirection;
 
     if (this.isPressed("ArrowLeft", this.cursors?.left.isDown, this.wasd?.A.isDown)) {
@@ -88,7 +90,7 @@ export class PlayerSystem {
       this.lastInputDirection = 0;
     } else if (direction !== this.lastInputDirection) {
       if (this.canStartLaneChange(time)) {
-        this.startLaneChange(direction, time);
+        this.startLaneChange(direction, time, effectiveSpeedMultiplier);
       }
       this.lastInputDirection = direction;
     }
@@ -186,7 +188,7 @@ export class PlayerSystem {
     return !this.laneChange && time >= this.laneChangeCooldownUntil && !this.isSteeringLocked(time);
   }
 
-  private startLaneChange(direction: number, time: number) {
+  private startLaneChange(direction: number, time: number, speedMultiplier: number) {
     const nextIndex = Phaser.Math.Clamp(this.currentLaneIndex + direction, 0, this.laneXs.length - 1);
     if (nextIndex === this.currentLaneIndex) {
       return;
@@ -202,7 +204,8 @@ export class PlayerSystem {
       fromX: this.sprite.x,
       toX,
       startedAt: time,
-      endsAt: time + GAME_BALANCE.player.laneChangeDurationMs,
+      durationMs: GAME_BALANCE.player.laneChangeDurationMs / speedMultiplier,
+      endsAt: time + GAME_BALANCE.player.laneChangeDurationMs / speedMultiplier,
     };
     this.currentLaneIndex = nextIndex;
   }
@@ -221,7 +224,7 @@ export class PlayerSystem {
     }
 
     const progress = Phaser.Math.Clamp(
-      (time - this.laneChange.startedAt) / GAME_BALANCE.player.laneChangeDurationMs,
+      (time - this.laneChange.startedAt) / this.laneChange.durationMs,
       0,
       1,
     );

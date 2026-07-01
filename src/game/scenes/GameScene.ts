@@ -141,7 +141,7 @@ export class GameScene extends Phaser.Scene {
     this.traffic.destroyVehicle(vehicle);
     this.scoring.registerVehicleDestroyed();
     const basePoints = carModel ? this.scoring.addVehicleBaseScore(carModel) : 0;
-    const jackpotHit = this.missions?.registerHit(this.scoring);
+    const jackpotHit = this.missions?.registerHit(this.scoring, kind !== "policeCar");
 
     this.audio?.playHit(kind, 1);
     this.effects.impact(kind, 1);
@@ -154,9 +154,9 @@ export class GameScene extends Phaser.Scene {
         color: "#86efac",
         fontSize: 42,
       });
-    } else if (jackpotHit?.status === "completed") {
-      this.effects.missionComplete("SUPERJACKPOT", jackpotHit.awardedScore);
-      this.effects.floatingText(this.scale.width / 2, 278, `SUPERJACKPOT x2 +${jackpotHit.awardedScore}`, {
+    } else if (jackpotHit?.status === "bonus") {
+      const bonusMultiplier = GAME_BALANCE.superJackpot.scoreMultiplier + Math.max(0, jackpotHit.snapshot.progress - GAME_BALANCE.superJackpot.targetCars - 1);
+      this.effects.floatingText(this.scale.width / 2, 278, `SUPERJACKPOT x${bonusMultiplier} +${jackpotHit.awardedScore}`, {
         color: "#86efac",
         fontSize: 38,
         rise: 64,
@@ -224,12 +224,9 @@ export class GameScene extends Phaser.Scene {
       }),
     );
 
-    const jackpot = this.missions?.getSnapshots()[0];
-    const missionSummary = jackpot ? `${jackpot.progress}/${jackpot.target}` : undefined;
     this.effects.gameOverOverlay(
       this.scoring.score,
       this.scoring.autosDestroyed,
-      missionSummary,
       this.missions?.getEndTitle(),
     );
 
@@ -268,7 +265,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const speed = 220 * (delta / 1000);
+    const speed = (GAME_BALANCE.player.baseSpeed * 2) * (delta / 1000);
     const loadedStreets = this.getLoadedStreetAssets();
     const topY = () => Math.min(...this.roadTiles.map((tile) => tile.y));
 
