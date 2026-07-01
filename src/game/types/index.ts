@@ -3,26 +3,23 @@ export type GameSessionState = "countdown" | "running" | "finished";
 export type VehicleKind = "normalCar" | "taxi" | "van" | "policeCar";
 export type CarModel = "peugeot" | "chery" | "meriva" | "focus" | "eco";
 
-export type MissionSnapshot = {
+export type SuperJackpotSnapshot = {
   id: string;
   label: string;
   progress: number;
   target: number;
   multiplier: number;
-  expectedModel: CarModel;
+  active: boolean;
+  completed: boolean;
   subtotal: number;
 };
 
-export type MissionHitStatus = "correct" | "broken" | "completed";
+export type SuperJackpotHitStatus = "inactive" | "progress" | "completed";
 
-export type MissionHitResult = {
-  status: MissionHitStatus;
-  mission: MissionSnapshot;
-  expectedModel: CarModel;
-  actualModel?: CarModel;
-  basePoints?: number;
+export type SuperJackpotHitResult = {
+  status: SuperJackpotHitStatus;
+  snapshot: SuperJackpotSnapshot;
   awardedScore: number;
-  chainWasActive?: boolean;
 };
 
 declare global {

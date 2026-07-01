@@ -11,9 +11,20 @@ type SpawnConfig = {
   modelWeights: Record<CarModel, number>;
 };
 
+type TrafficDirectorContext = {
+  playerLaneIndex?: number;
+  superJackpotActive?: boolean;
+  superJackpotCompleted?: boolean;
+};
+
 type LaneObstacle = {
   laneIndex: number;
   y: number;
+};
+
+type LaneVehicle = LaneObstacle & {
+  sprite: Phaser.Physics.Arcade.Sprite;
+  speed: number;
 };
 
 const VEHICLE_TEXTURES: Record<VehicleKind, string> = {
@@ -44,13 +55,20 @@ export class TrafficSystem {
   readonly group: Phaser.Physics.Arcade.Group;
   private nextSpawnAt = 0;
   private started = false;
+  private spawnCount = 0;
+  private lastSpawnedLaneIndex: number | null = null;
+  private readonly laneSpawnCounts = GAME_BALANCE.traffic.lanes.map(() => 0);
+  private readonly laneLastSpawnAt = GAME_BALANCE.traffic.lanes.map(() => 0);
+  private superJackpotStarted = false;
+  private superJackpotSpawnedCount = 0;
+  private nextSuperJackpotSpawnAt = 0;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.group = scene.physics.add.group();
     this.ensureVehicleTextures();
   }
 
-  update(time: number, difficulty: DifficultyLevel) {
+  update(time: number, difficulty: DifficultyLevel, context: TrafficDirectorContext = {}) {
     const config = GAME_BALANCE.traffic[difficulty] satisfies SpawnConfig;
 
     if (!this.started) {
@@ -59,8 +77,10 @@ export class TrafficSystem {
       return;
     }
 
-    if (time >= this.nextSpawnAt) {
-      this.spawnVehicle(config);
+    if (context.superJackpotActive) {
+      this.updateSuperJackpotTraffic(time, config, context);
+    } else if (time >= this.nextSpawnAt) {
+      this.spawnVehicle(config, time, context.playerLaneIndex);
       this.nextSpawnAt = time + config.spawnEveryMs;
     }
 
@@ -90,18 +110,63 @@ export class TrafficSystem {
     return sprite.getData("carModel") as CarModel | undefined;
   }
 
-  private spawnVehicle(config: SpawnConfig) {
-    const kind = this.pickVehicleKind(config.policeChance);
-    const y = -90;
-    const laneIndex = this.pickDodgeableLane(y);
-    if (laneIndex === null) {
-      return;
+  private updateSuperJackpotTraffic(time: number, baseConfig: SpawnConfig, context: TrafficDirectorContext) {
+    if (!this.superJackpotStarted) {
+      this.superJackpotStarted = true;
+      this.superJackpotSpawnedCount = 0;
+      this.nextSuperJackpotSpawnAt = time;
     }
 
+    const config = this.getSuperJackpotConfig(baseConfig);
+    let attempts = 0;
+    while (
+      !context.superJackpotCompleted &&
+      this.superJackpotSpawnedCount < GAME_BALANCE.superJackpot.targetCars &&
+      time >= this.nextSuperJackpotSpawnAt &&
+      attempts < 3
+    ) {
+      const spawned = this.spawnVehicle(config, time, context.playerLaneIndex);
+      if (spawned) {
+        this.superJackpotSpawnedCount += 1;
+        this.nextSuperJackpotSpawnAt += GAME_BALANCE.superJackpot.spawnEveryMs;
+      } else {
+        this.nextSuperJackpotSpawnAt += 100;
+      }
+      attempts += 1;
+    }
+  }
+
+  private getSuperJackpotConfig(baseConfig: SpawnConfig): SpawnConfig {
+    return {
+      ...baseConfig,
+      spawnEveryMs: GAME_BALANCE.superJackpot.spawnEveryMs,
+      policeChance: GAME_BALANCE.superJackpot.policeChance,
+    };
+  }
+
+  private spawnVehicle(config: SpawnConfig, time: number, playerLaneIndex?: number) {
+    const y = -90;
+
+    for (let attempt = 0; attempt < GAME_BALANCE.traffic.spawnRetryCount; attempt += 1) {
+      const kind = this.pickVehicleKind(config.policeChance);
+      const carModel = kind === "policeCar" ? undefined : this.pickCarModel(config.modelWeights);
+      const desiredSpeed = this.getModelSpeed(config, carModel);
+      const laneIndex = this.pickSmartLane(y, desiredSpeed, time, playerLaneIndex);
+
+      if (laneIndex === null) {
+        continue;
+      }
+
+      this.createVehicle(kind, carModel, laneIndex, y, this.getSafeSpeedForLane(laneIndex, desiredSpeed, y), time);
+      return true;
+    }
+
+    return false;
+  }
+
+  private createVehicle(kind: VehicleKind, carModel: CarModel | undefined, laneIndex: number, y: number, speed: number, time: number) {
     const x = GAME_BALANCE.traffic.lanes[laneIndex];
-    const carModel = kind === "policeCar" ? undefined : this.pickCarModel(config.modelWeights);
     const texture = kind === "policeCar" ? ASSET_KEYS.policeCar : CAR_MODEL_TEXTURES[carModel ?? "peugeot"];
-    const speed = this.getSafeSpeed(x, this.getModelSpeed(config, carModel));
     const sprite = this.group.create(x, y, texture) as Phaser.Physics.Arcade.Sprite;
 
     sprite.setData("vehicleKind", kind);
@@ -110,6 +175,7 @@ export class TrafficSystem {
     this.scaleVehicle(sprite, kind);
     sprite.setVelocityY(speed);
     sprite.setDepth(kind === "policeCar" ? 8 : 6);
+    this.registerLaneSpawn(laneIndex, time);
 
     const body = sprite.body as Phaser.Physics.Arcade.Body;
     body.setSize(
@@ -122,23 +188,112 @@ export class TrafficSystem {
     );
   }
 
-  private pickDodgeableLane(y: number): number | null {
-    const laneIndexes = Phaser.Utils.Array.Shuffle(GAME_BALANCE.traffic.lanes.map((_lane, index) => index));
-    const safeLane = laneIndexes.find(
-      (laneIndex) => this.hasMinimumGapInLane(laneIndex, y) && !this.wouldCreateUndodgeableRoute(laneIndex, y),
-    );
+  private pickSmartLane(y: number, desiredSpeed: number, time: number, playerLaneIndex?: number): number | null {
+    const safeLanes = this.getSafeSpawnLanes(y, desiredSpeed);
 
-    if (safeLane !== undefined) {
-      return safeLane;
+    if (safeLanes.length === 0) {
+      return GAME_BALANCE.traffic.spawnSkipIfNoSafeLane ? null : this.getThreatLaneOrder(time, playerLaneIndex)[0] ?? null;
     }
 
-    return GAME_BALANCE.traffic.spawnSkipIfNoSafeLane ? null : laneIndexes[0] ?? null;
+    return this.pickWeightedLane(safeLanes, time, playerLaneIndex);
+  }
+
+  private getSafeSpawnLanes(candidateY: number, desiredSpeed: number) {
+    return GAME_BALANCE.traffic.lanes
+      .map((_lane, laneIndex) => laneIndex)
+      .filter(
+        (laneIndex) =>
+          this.hasMinimumGapInLane(laneIndex, candidateY) &&
+          this.hasSafeCatchupGap(laneIndex, candidateY, desiredSpeed) &&
+          !this.wouldCreateUndodgeableRoute(laneIndex, candidateY),
+      );
+  }
+
+  private pickWeightedLane(laneIndexes: number[], time: number, playerLaneIndex?: number) {
+    const orderedLaneIndexes = this.getThreatLaneOrder(time, playerLaneIndex).filter((laneIndex) => laneIndexes.includes(laneIndex));
+    const weights = orderedLaneIndexes.map((laneIndex) => Math.max(1, this.getLaneThreatScore(laneIndex, this.normalizeLaneIndex(playerLaneIndex), time)));
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    let roll = Math.random() * totalWeight;
+
+    for (let index = 0; index < orderedLaneIndexes.length; index += 1) {
+      roll -= weights[index];
+      if (roll <= 0) {
+        return orderedLaneIndexes[index];
+      }
+    }
+
+    return orderedLaneIndexes[0] ?? null;
+  }
+
+  private getThreatLaneOrder(time: number, playerLaneIndex?: number) {
+    const maxSpawnCount = Math.max(0, ...this.laneSpawnCounts);
+    const normalizedPlayerLaneIndex = this.normalizeLaneIndex(playerLaneIndex);
+
+    return GAME_BALANCE.traffic.lanes
+      .map((_lane, laneIndex) => ({
+        laneIndex,
+        score: this.getLaneThreatScore(laneIndex, normalizedPlayerLaneIndex, time, maxSpawnCount),
+      }))
+      .sort((left, right) => right.score - left.score || left.laneIndex - right.laneIndex)
+      .map(({ laneIndex }) => laneIndex);
+  }
+
+  private getLaneThreatScore(laneIndex: number, playerLaneIndex: number | null, time: number, maxSpawnCount = Math.max(0, ...this.laneSpawnCounts)) {
+    const distanceFromPlayer = playerLaneIndex === null ? 1 : Math.abs(laneIndex - playerLaneIndex);
+    const playerPressure =
+      distanceFromPlayer === 0
+        ? GAME_BALANCE.traffic.playerLaneThreatWeight
+        : distanceFromPlayer === 1
+          ? GAME_BALANCE.traffic.adjacentLaneThreatWeight
+          : GAME_BALANCE.traffic.farLaneThreatWeight;
+    const varietyDebt = (maxSpawnCount - this.laneSpawnCounts[laneIndex]) * GAME_BALANCE.traffic.laneVarietyDebtWeight;
+    const starvationBonus = Math.max(0, time - this.laneLastSpawnAt[laneIndex] - GAME_BALANCE.traffic.laneStarvationMs) * 0.04;
+    const repeatPenalty = laneIndex === this.lastSpawnedLaneIndex ? 12 : 0;
+
+    return playerPressure + varietyDebt + starvationBonus - repeatPenalty;
+  }
+
+  private normalizeLaneIndex(playerLaneIndex?: number) {
+    return typeof playerLaneIndex === "number" ? Phaser.Math.Clamp(playerLaneIndex, 0, GAME_BALANCE.traffic.lanes.length - 1) : null;
+  }
+
+  private registerLaneSpawn(laneIndex: number, time: number) {
+    this.spawnCount += 1;
+    this.lastSpawnedLaneIndex = laneIndex;
+    this.laneSpawnCounts[laneIndex] = (this.laneSpawnCounts[laneIndex] ?? 0) + 1;
+    this.laneLastSpawnAt[laneIndex] = time;
+
+    if (this.spawnCount > 90) {
+      this.spawnCount = 0;
+      const minSpawnCount = Math.min(...this.laneSpawnCounts);
+      this.laneSpawnCounts.forEach((_count, index) => {
+        this.laneSpawnCounts[index] -= minSpawnCount;
+      });
+    }
   }
 
   private hasMinimumGapInLane(laneIndex: number, y: number) {
     const lane = GAME_BALANCE.traffic.lanes[laneIndex];
     const closestVehicle = this.getClosestVehicleInLane(lane);
-    return !closestVehicle || closestVehicle.y - y > GAME_BALANCE.traffic.minVehicleGap;
+    return !closestVehicle || closestVehicle.y - y >= GAME_BALANCE.traffic.sameLaneMinGapPx;
+  }
+
+  private hasSafeCatchupGap(laneIndex: number, y: number, desiredSpeed: number) {
+    const closestVehicle = this.getClosestVehicleAheadInLane(laneIndex, y);
+    if (!closestVehicle) {
+      return true;
+    }
+
+    const gap = closestVehicle.y - y;
+    if (gap < GAME_BALANCE.traffic.minSpawnYGapPx) {
+      return false;
+    }
+
+    if (desiredSpeed <= closestVehicle.speed) {
+      return true;
+    }
+
+    return gap >= GAME_BALANCE.traffic.sameLaneMinGapPx + GAME_BALANCE.traffic.sameLaneCatchupExtraGapPx;
   }
 
   private wouldCreateUndodgeableRoute(laneIndex: number, y: number) {
@@ -174,13 +329,13 @@ export class TrafficSystem {
           .map((obstacle) => obstacle.laneIndex),
       );
 
-      return blockedLanes.size === GAME_BALANCE.traffic.lanes.length;
+      return blockedLanes.size > GAME_BALANCE.traffic.maxBlockedLanesPerWindow;
     });
   }
 
   private createsTooTightThreeLaneStagger(obstacles: LaneObstacle[]) {
     return obstacles.some((pivot) => {
-      const nearby = obstacles.filter((obstacle) => Math.abs(obstacle.y - pivot.y) <= GAME_BALANCE.traffic.dodgeRouteWindowPx);
+      const nearby = obstacles.filter((obstacle) => Math.abs(obstacle.y - pivot.y) <= GAME_BALANCE.traffic.routeSafetyWindowPx);
       const blockedLanes = new Set(nearby.map((obstacle) => obstacle.laneIndex));
 
       if (blockedLanes.size < GAME_BALANCE.traffic.lanes.length) {
@@ -208,13 +363,18 @@ export class TrafficSystem {
     return laneIndex >= 0 ? laneIndex : null;
   }
 
-  private getSafeSpeed(lane: number, speed: number) {
-    const closestVehicle = this.getClosestVehicleInLane(lane);
+  private getSafeSpeedForLane(laneIndex: number, desiredSpeed: number, y: number) {
+    const closestVehicle = this.getClosestVehicleAheadInLane(laneIndex, y);
     if (!closestVehicle) {
-      return speed;
+      return desiredSpeed;
     }
 
-    return Math.min(speed, Math.max(0, closestVehicle.body?.velocity.y ?? speed));
+    const gap = closestVehicle.y - y;
+    if (desiredSpeed <= closestVehicle.speed || gap >= GAME_BALANCE.traffic.sameLaneMinGapPx + GAME_BALANCE.traffic.sameLaneCatchupExtraGapPx) {
+      return desiredSpeed;
+    }
+
+    return Math.min(desiredSpeed, Math.max(0, closestVehicle.speed));
   }
 
   private getClosestVehicleInLane(lane: number): Phaser.Physics.Arcade.Sprite | null {
@@ -232,6 +392,37 @@ export class TrafficSystem {
     });
 
     return closest;
+  }
+
+  private getClosestVehicleAheadInLane(laneIndex: number, y: number): LaneVehicle | null {
+    let closest: LaneVehicle | null = null;
+
+    this.getActiveLaneVehicles().forEach((vehicle) => {
+      if (vehicle.laneIndex !== laneIndex || vehicle.y <= y) {
+        return;
+      }
+
+      if (!closest || vehicle.y < closest.y) {
+        closest = vehicle;
+      }
+    });
+
+    return closest;
+  }
+
+  private getActiveLaneVehicles() {
+    return this.group
+      .getChildren()
+      .map((child) => {
+        const sprite = child as Phaser.Physics.Arcade.Sprite;
+        return {
+          sprite,
+          laneIndex: this.getLaneIndexForX(sprite.x),
+          y: sprite.y,
+          speed: Math.max(0, (sprite.body as Phaser.Physics.Arcade.Body | null)?.velocity.y ?? 0),
+        };
+      })
+      .filter((vehicle): vehicle is LaneVehicle => vehicle.sprite.active && vehicle.laneIndex !== null);
   }
 
   private pickVehicleKind(policeChance: number): VehicleKind {

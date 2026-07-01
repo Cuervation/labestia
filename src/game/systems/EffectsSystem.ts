@@ -169,7 +169,7 @@ export class EffectsSystem {
       .setOrigin(0.5)
       .setDepth(120);
     const statsText = `${endTitle.toUpperCase()}\nPUNTAJE ${score}\nAUTOS ${carsDestroyed}${
-      missionSummary ? `\nOBJETIVOS ${missionSummary}` : ""
+      missionSummary ? `\nSUPERJACKPOT ${missionSummary}` : ""
     }`;
     const stats = this.scene.add
       .text(centerX, centerY - 24, statsText, {

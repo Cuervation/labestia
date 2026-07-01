@@ -13,6 +13,14 @@ export class PlayerSystem {
   private steeringLockedUntil = 0;
   private touchDirection = 0;
   private currentTextureKey: string = ASSET_KEYS.playerCenter;
+  private laneChange?: {
+    direction: number;
+    fromX: number;
+    toX: number;
+    startedAt: number;
+    endsAt: number;
+  };
+  private laneChangeCooldownUntil = 0;
   private readonly handleKeyDown = (event: KeyboardEvent) => {
     this.pressedKeys.add(event.code);
   };
@@ -74,20 +82,23 @@ export class PlayerSystem {
       direction = 0;
     }
 
+    this.updateLaneChange(time);
+
     if (direction === 0) {
       this.lastInputDirection = 0;
     } else if (direction !== this.lastInputDirection) {
-      this.moveOneLane(direction);
+      if (this.canStartLaneChange(time)) {
+        this.startLaneChange(direction, time);
+      }
       this.lastInputDirection = direction;
     }
 
-    const laneX = this.laneXs[this.currentLaneIndex] ?? this.sprite.x;
-    this.sprite.setX(laneX);
     this.sprite.setVelocity(0, 0);
 
-    if (direction < 0) {
+    const visualDirection = this.laneChange?.direction ?? direction;
+    if (visualDirection < 0) {
       this.setTexture(ASSET_KEYS.playerLeft);
-    } else if (direction > 0) {
+    } else if (visualDirection > 0) {
       this.setTexture(ASSET_KEYS.playerRight);
     } else {
       this.setTexture(ASSET_KEYS.playerCenter);
@@ -100,6 +111,9 @@ export class PlayerSystem {
 
   idle() {
     this.sprite.setVelocity(0, 0);
+    if (!this.laneChange) {
+      this.sprite.setX(this.laneXs[this.currentLaneIndex] ?? this.sprite.x);
+    }
     this.setTexture(ASSET_KEYS.playerCenter);
   }
 
@@ -117,6 +131,10 @@ export class PlayerSystem {
     }
 
     return "center";
+  }
+
+  getLaneIndex() {
+    return this.currentLaneIndex;
   }
 
   private ensurePlayerTextures() {
@@ -164,9 +182,51 @@ export class PlayerSystem {
     window.removeEventListener("laBestia:playerControl", this.handleTouchControl);
   }
 
-  private moveOneLane(direction: number) {
-    const nextIndex = this.currentLaneIndex + direction;
-    this.currentLaneIndex = Phaser.Math.Clamp(nextIndex, 0, this.laneXs.length - 1);
+  private canStartLaneChange(time: number) {
+    return !this.laneChange && time >= this.laneChangeCooldownUntil && !this.isSteeringLocked(time);
+  }
+
+  private startLaneChange(direction: number, time: number) {
+    const nextIndex = Phaser.Math.Clamp(this.currentLaneIndex + direction, 0, this.laneXs.length - 1);
+    if (nextIndex === this.currentLaneIndex) {
+      return;
+    }
+
+    const toX = this.laneXs[nextIndex];
+    if (toX === undefined) {
+      return;
+    }
+
+    this.laneChange = {
+      direction,
+      fromX: this.sprite.x,
+      toX,
+      startedAt: time,
+      endsAt: time + GAME_BALANCE.player.laneChangeDurationMs,
+    };
+    this.currentLaneIndex = nextIndex;
+  }
+
+  private updateLaneChange(time: number) {
+    if (!this.laneChange) {
+      this.sprite.setX(this.laneXs[this.currentLaneIndex] ?? this.sprite.x);
+      return;
+    }
+
+    if (time >= this.laneChange.endsAt) {
+      this.sprite.setX(this.laneChange.toX);
+      this.laneChangeCooldownUntil = time + GAME_BALANCE.player.laneChangeCooldownMs;
+      this.laneChange = undefined;
+      return;
+    }
+
+    const progress = Phaser.Math.Clamp(
+      (time - this.laneChange.startedAt) / GAME_BALANCE.player.laneChangeDurationMs,
+      0,
+      1,
+    );
+    const easedProgress = Phaser.Math.Easing.Sine.Out(progress);
+    this.sprite.setX(Phaser.Math.Linear(this.laneChange.fromX, this.laneChange.toX, easedProgress));
   }
 
   private getNearestLaneIndex(x: number) {

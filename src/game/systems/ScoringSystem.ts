@@ -60,6 +60,12 @@ export class ScoringSystem {
     this.score += points;
   }
 
+  multiplyScore(multiplier: number) {
+    const previousScore = this.score;
+    this.score *= multiplier;
+    return this.score - previousScore;
+  }
+
   getDifficulty(): DifficultyLevel {
     if (this.elapsedSeconds < GAME_BALANCE.difficulty.mediumAfterSeconds) {
       return "easy";

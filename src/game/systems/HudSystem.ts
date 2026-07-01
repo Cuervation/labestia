@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { ASSET_KEYS } from "../config/assets";
 import { ScoringSystem } from "./ScoringSystem";
-import type { MissionSnapshot } from "../types";
+import type { SuperJackpotSnapshot } from "../types";
 
 type HudText = Phaser.GameObjects.Text;
 
@@ -11,14 +11,14 @@ export class HudSystem {
   private readonly timerText: HudText;
   private readonly difficultyText: HudText;
   private readonly hintText: HudText;
-  private readonly missionPanel: Phaser.GameObjects.Graphics;
-  private readonly missionTexts: HudText[];
+  private readonly superJackpotPanel: Phaser.GameObjects.Graphics;
+  private readonly superJackpotTexts: HudText[];
 
   constructor(scene: Phaser.Scene) {
     this.addTopFrame(scene);
-    this.missionPanel = scene.add.graphics();
-    this.missionPanel.setScrollFactor(0);
-    this.missionPanel.setDepth(99);
+    this.superJackpotPanel = scene.add.graphics();
+    this.superJackpotPanel.setScrollFactor(0);
+    this.superJackpotPanel.setDepth(99);
 
     const timerValueX = 126;
     const scoreValueX = scene.scale.width - 128;
@@ -31,15 +31,15 @@ export class HudSystem {
       .text(scoreValueX, 104 + this.topOffset, "0", this.valueStyle())
       .setOrigin(0.5, 0.5)
       .setPadding(10, 4, 10, 4);
-    this.difficultyText = scene.add.text(scene.scale.width - 28, 158 + this.topOffset, "PUNTAJE ? NIVEL EASY", this.style("#38bdf8", 24, "Teko, Arial, sans-serif")).setOrigin(1, 0);
+    this.difficultyText = scene.add.text(scene.scale.width - 28, 158 + this.topOffset, "PUNTAJE · NIVEL EASY", this.style("#38bdf8", 24, "Teko, Arial, sans-serif")).setOrigin(1, 0);
     this.hintText = scene.add
-      .text(scene.scale.width / 2, 330 + this.topOffset, "COMPLET? LA MISI?N PERFECTA", {
+      .text(scene.scale.width / 2, 330 + this.topOffset, "AGUANTÁ HASTA EL SUPERJACKPOT", {
         ...this.style("#fff7ed", 22, "Luckiest Guy, Impact, sans-serif"),
         align: "center",
         wordWrap: { width: scene.scale.width - 48 },
       })
       .setOrigin(0.5, 0);
-    this.missionTexts = [
+    this.superJackpotTexts = [
       scene.add.text(40, 194 + this.topOffset, "", this.style("#fff7ed", 19, "Luckiest Guy, Impact, sans-serif")),
       scene.add.text(40, 232 + this.topOffset, "", this.style("#fff7ed", 27, "Teko, Arial, sans-serif")),
       scene.add.text(40, 270 + this.topOffset, "", this.style("#fff7ed", 19, "Luckiest Guy, Impact, sans-serif")),
@@ -50,7 +50,7 @@ export class HudSystem {
       this.timerText,
       this.difficultyText,
       this.hintText,
-      ...this.missionTexts,
+      ...this.superJackpotTexts,
     ].forEach((text) => {
       text.setScrollFactor(0);
       text.setDepth(100);
@@ -65,12 +65,12 @@ export class HudSystem {
     });
   }
 
-  update(scoring: ScoringSystem, missions: MissionSnapshot[] = []) {
+  update(scoring: ScoringSystem, jackpots: SuperJackpotSnapshot[] = []) {
     this.scoreText.setText(`${scoring.score.toLocaleString("es-AR")}`);
     this.timerText.setText(this.formatTime(scoring.remainingSeconds));
-    this.difficultyText.setText(`PUNTAJE ? NIVEL ${scoring.getDifficulty().toUpperCase()}`);
+    this.difficultyText.setText(`PUNTAJE · NIVEL ${scoring.getDifficulty().toUpperCase()}`);
     this.timerText.setColor(scoring.remainingSeconds <= 10 ? "#ef4444" : "#fff7ed");
-    this.updateMission(missions[0]);
+    this.updateSuperJackpot(jackpots[0]);
   }
 
   private valueStyle(): Phaser.Types.GameObjects.Text.TextStyle {
@@ -111,25 +111,25 @@ export class HudSystem {
       .setDepth(99);
   }
 
-  private updateMission(mission?: MissionSnapshot) {
-    if (!mission) {
-      this.missionPanel.clear();
-      this.missionTexts.forEach((text) => text.setText(""));
+  private updateSuperJackpot(jackpot?: SuperJackpotSnapshot) {
+    if (!jackpot) {
+      this.superJackpotPanel.clear();
+      this.superJackpotTexts.forEach((text) => text.setText(""));
       return;
     }
 
-    this.missionPanel.clear();
-    this.missionPanel.fillStyle(0x050505, 0.78);
-    this.missionPanel.fillRoundedRect(16, 176 + this.topOffset, 374, 128, 12);
-    this.missionPanel.lineStyle(2, 0xfacc15, 0.35);
-    this.missionPanel.strokeRoundedRect(16, 176 + this.topOffset, 374, 128, 12);
+    this.superJackpotPanel.clear();
+    this.superJackpotPanel.fillStyle(jackpot.active ? 0x2a0505 : 0x050505, 0.82);
+    this.superJackpotPanel.fillRoundedRect(16, 176 + this.topOffset, 374, 128, 12);
+    this.superJackpotPanel.lineStyle(2, jackpot.active ? 0xf97316 : 0xfacc15, jackpot.active ? 0.7 : 0.35);
+    this.superJackpotPanel.strokeRoundedRect(16, 176 + this.topOffset, 374, 128, 12);
 
-    this.missionTexts[0].setText(`OBJETIVO: ${mission.label}`);
-    this.missionTexts[0].setColor("#facc15");
-    this.missionTexts[1].setText(`PROGRESO: ${mission.progress}/${mission.target}`);
-    this.missionTexts[1].setColor("#fff7ed");
-    this.missionTexts[2].setText(`BONUS: x${mission.multiplier}`);
-    this.missionTexts[2].setColor("#86efac");
+    this.superJackpotTexts[0].setText(jackpot.label);
+    this.superJackpotTexts[0].setColor(jackpot.active ? "#fb923c" : "#facc15");
+    this.superJackpotTexts[1].setText(`PROGRESO: ${jackpot.progress}/${jackpot.target}`);
+    this.superJackpotTexts[1].setColor(jackpot.completed ? "#86efac" : "#fff7ed");
+    this.superJackpotTexts[2].setText(`PREMIO: x${jackpot.multiplier} PUNTAJE`);
+    this.superJackpotTexts[2].setColor("#86efac");
   }
 
   private formatTime(seconds: number) {

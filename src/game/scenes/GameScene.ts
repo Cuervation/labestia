@@ -113,10 +113,15 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.missions.update(this.scoring.remainingSeconds);
     this.updateRoad(delta);
     this.updateWomanStreetEvent(time);
     this.player.update(time, 1, this.isWhistleDialogActive(time));
-    this.traffic.update(time, this.scoring.getDifficulty());
+    this.traffic.update(time, this.scoring.getDifficulty(), {
+      playerLaneIndex: this.player.getLaneIndex(),
+      superJackpotActive: this.missions.isActive(),
+      superJackpotCompleted: this.missions.isCompleted(),
+    });
     this.hud.update(this.scoring, this.missions.getSnapshots());
     this.updateWhistleDialog(time);
     this.emitSmoke(delta);
@@ -136,29 +141,29 @@ export class GameScene extends Phaser.Scene {
     this.traffic.destroyVehicle(vehicle);
     this.scoring.registerVehicleDestroyed();
     const basePoints = carModel ? this.scoring.addVehicleBaseScore(carModel) : 0;
-    const missionHit = this.missions?.registerHit(carModel, this.scoring);
+    const jackpotHit = this.missions?.registerHit(this.scoring);
 
     this.audio?.playHit(kind, 1);
     this.effects.impact(kind, 1);
     this.effects.sparks(x, y, kind, 1);
     this.effects.explosion(x, y, 1);
 
-    if (missionHit?.status === "correct") {
-      this.effects.floatingText(x, y - 34, `${this.formatCarModel(carModel)} +${basePoints} ${missionHit.mission.progress}/${missionHit.mission.target}`, {
+    if (jackpotHit?.status === "progress") {
+      const label = basePoints > 0 ? `${this.formatCarModel(carModel)} +${basePoints}` : "POLICIA";
+      this.effects.floatingText(x, y - 34, `${label} ? SUPER ${jackpotHit.snapshot.progress}/${jackpotHit.snapshot.target}`, {
         color: "#86efac",
         fontSize: 42,
       });
-    } else if (missionHit?.status === "completed") {
-      this.effects.missionComplete(missionHit.mission.label, missionHit.awardedScore);
-      this.effects.floatingText(this.scale.width / 2, 278, `MISIÓN COMPLETADA +${missionHit.awardedScore}`, {
+    } else if (jackpotHit?.status === "completed") {
+      this.effects.missionComplete("SUPERJACKPOT", jackpotHit.awardedScore);
+      this.effects.floatingText(this.scale.width / 2, 278, `SUPERJACKPOT x2 +${jackpotHit.awardedScore}`, {
         color: "#86efac",
         fontSize: 38,
         rise: 64,
       });
-    } else if (missionHit?.status === "broken") {
+    } else {
       const vehicleLabel = isPolice ? "POLICIA" : this.formatCarModel(carModel);
-      const brokeActiveChain = missionHit.chainWasActive === true;
-      const label = basePoints > 0 ? `${vehicleLabel} +${basePoints}${brokeActiveChain ? " CADENA CORTADA" : ""}` : vehicleLabel;
+      const label = basePoints > 0 ? `${vehicleLabel} +${basePoints}` : vehicleLabel;
       this.effects.floatingText(x, y - 34, label, {
         color: isPolice ? "#93c5fd" : "#fb7185",
         fontSize: 40,
@@ -219,7 +224,8 @@ export class GameScene extends Phaser.Scene {
       }),
     );
 
-    const missionSummary = `${this.missions?.getCompletedCount() ?? 0}/${this.missions?.getTotalCount() ?? 0}`;
+    const jackpot = this.missions?.getSnapshots()[0];
+    const missionSummary = jackpot ? `${jackpot.progress}/${jackpot.target}` : undefined;
     this.effects.gameOverOverlay(
       this.scoring.score,
       this.scoring.autosDestroyed,

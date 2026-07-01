@@ -1,108 +1,88 @@
 import { GAME_BALANCE } from "../config/balance";
-import type { CarModel, MissionHitResult, MissionSnapshot } from "../types";
+import type { SuperJackpotHitResult, SuperJackpotSnapshot } from "../types";
 import type { ScoringSystem } from "./ScoringSystem";
 
-type MissionConfig = (typeof GAME_BALANCE.missionScoring.missions)[number];
-
 export class MissionSystem {
-  private activeMission: MissionConfig;
-  private previousMissionId: string | null = null;
+  private active = false;
+  private completed = false;
   private progress = 0;
-  private subtotal = 0;
-  private completedCount = 0;
+  private awardedScore = 0;
 
-  constructor() {
-    this.activeMission = this.pickMission();
+  update(remainingSeconds: number) {
+    if (this.active) {
+      return;
+    }
+
+    this.active = remainingSeconds <= GAME_BALANCE.superJackpot.startsAtRemainingSeconds;
   }
 
-  registerHit(carModel: CarModel | undefined, scoring: ScoringSystem): MissionHitResult {
-    if (carModel !== this.activeMission.model) {
-      const chainWasActive = this.progress > 0;
-      this.progress = 0;
-      this.subtotal = 0;
+  registerHit(scoring: ScoringSystem): SuperJackpotHitResult {
+    if (!this.active || this.completed) {
       return {
-        status: "broken",
-        mission: this.getSnapshot(),
-        expectedModel: this.activeMission.model,
-        actualModel: carModel,
-        basePoints: carModel ? GAME_BALANCE.score[carModel] : undefined,
-        awardedScore: 0,
-        chainWasActive,
-      };
-    }
-
-    const basePoints = GAME_BALANCE.score[carModel];
-    this.progress += 1;
-    this.subtotal += basePoints;
-
-    if (this.progress < this.activeMission.target) {
-      return {
-        status: "correct",
-        mission: this.getSnapshot(),
-        expectedModel: this.activeMission.model,
-        actualModel: carModel,
-        basePoints,
+        status: "inactive",
+        snapshot: this.getSnapshot(),
         awardedScore: 0,
       };
     }
 
-    const completedMission = this.getSnapshot();
-    const awardedScore = this.subtotal * GAME_BALANCE.missionScoring.completionMultiplier;
-    scoring.addMissionScore(awardedScore);
-    this.completedCount += 1;
-    this.previousMissionId = this.activeMission.id;
-    this.activeMission = this.pickMission(this.previousMissionId);
-    this.progress = 0;
-    this.subtotal = 0;
+    this.progress = Math.min(this.progress + 1, GAME_BALANCE.superJackpot.targetCars);
+
+    if (this.progress < GAME_BALANCE.superJackpot.targetCars) {
+      return {
+        status: "progress",
+        snapshot: this.getSnapshot(),
+        awardedScore: 0,
+      };
+    }
+
+    this.completed = true;
+    this.awardedScore = scoring.multiplyScore(GAME_BALANCE.superJackpot.scoreMultiplier);
 
     return {
       status: "completed",
-      mission: completedMission,
-      expectedModel: completedMission.expectedModel,
-      actualModel: carModel,
-      basePoints,
-      awardedScore,
+      snapshot: this.getSnapshot(),
+      awardedScore: this.awardedScore,
     };
   }
 
-  getSnapshots(): MissionSnapshot[] {
+  getSnapshots(): SuperJackpotSnapshot[] {
     return [this.getSnapshot()];
   }
 
+  isActive() {
+    return this.active;
+  }
+
+  isCompleted() {
+    return this.completed;
+  }
+
+  getRemainingTargets() {
+    return Math.max(0, GAME_BALANCE.superJackpot.targetCars - this.progress);
+  }
+
   getCompletedCount() {
-    return this.completedCount;
+    return this.completed ? 1 : 0;
   }
 
   getTotalCount() {
-    return GAME_BALANCE.missionScoring.missions.length;
+    return 1;
   }
 
   getEndTitle() {
-    if (this.completedCount >= 5) {
-      return "Misionero perfecto";
-    }
-    if (this.completedCount >= 2) {
-      return "Cadena callejera";
-    }
-    return "La Bestia";
+    return this.completed ? "SuperJackpot" : "La Bestia";
   }
 
-  private getSnapshot(): MissionSnapshot {
+  private getSnapshot(): SuperJackpotSnapshot {
     return {
-      id: this.activeMission.id,
-      label: this.activeMission.label,
+      id: "super-jackpot",
+      label: this.active ? "SUPERJACKPOT" : "SUPERJACKPOT EN 0:20",
       progress: this.progress,
-      target: this.activeMission.target,
-      multiplier: GAME_BALANCE.missionScoring.completionMultiplier,
-      expectedModel: this.activeMission.model,
-      subtotal: this.subtotal,
+      target: GAME_BALANCE.superJackpot.targetCars,
+      multiplier: GAME_BALANCE.superJackpot.scoreMultiplier,
+      active: this.active,
+      completed: this.completed,
+      subtotal: this.awardedScore,
     };
-  }
-
-  private pickMission(excludeId?: string) {
-    const missions = GAME_BALANCE.missionScoring.missions;
-    const options = excludeId ? missions.filter((mission) => mission.id !== excludeId) : missions;
-    const pool = options.length > 0 ? options : missions;
-    return pool[Math.floor(Math.random() * pool.length)];
   }
 }
