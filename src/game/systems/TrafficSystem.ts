@@ -14,7 +14,7 @@ type SpawnConfig = {
 type TrafficDirectorContext = {
   playerLaneIndex?: number;
   superJackpotActive?: boolean;
-  superJackpotCompleted?: boolean;
+  trafficSpeedMultiplier?: number;
 };
 
 type LaneObstacle = {
@@ -27,11 +27,20 @@ type LaneVehicle = LaneObstacle & {
   speed: number;
 };
 
+type SuperJackpotSpawnTargets = {
+  cars: number;
+  police: number;
+  riderOsky: number;
+  riderGaston: number;
+};
+
 const VEHICLE_TEXTURES: Record<VehicleKind, string> = {
   normalCar: ASSET_KEYS.normalCar,
   taxi: ASSET_KEYS.taxi,
   van: ASSET_KEYS.van,
   policeCar: ASSET_KEYS.policeCar,
+  riderOsky: ASSET_KEYS.riderOsky,
+  riderGaston: ASSET_KEYS.riderGaston,
 };
 
 const CAR_MODEL_TEXTURES: Record<CarModel, string> = {
@@ -49,6 +58,8 @@ const FALLBACK_COLORS: Record<VehicleKind, number> = {
   taxi: 0xfacc15,
   van: 0x9ca3af,
   policeCar: 0xe5e7eb,
+  riderOsky: 0xf97316,
+  riderGaston: 0x22c55e,
 };
 
 export class TrafficSystem {
@@ -62,6 +73,14 @@ export class TrafficSystem {
   private superJackpotStarted = false;
   private superJackpotSpawnedCars = 0;
   private superJackpotSpawnedPolice = 0;
+  private superJackpotSpawnedRiderOsky = 0;
+  private superJackpotSpawnedRiderGaston = 0;
+  private superJackpotSpawnTargets: SuperJackpotSpawnTargets = {
+    cars: 0,
+    police: 0,
+    riderOsky: 0,
+    riderGaston: 0,
+  };
   private nextSuperJackpotSpawnAt = 0;
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -81,9 +100,11 @@ export class TrafficSystem {
     if (context.superJackpotActive) {
       this.updateSuperJackpotTraffic(time, config, context);
     } else if (time >= this.nextSpawnAt) {
-      this.spawnVehicle(config, time, context.playerLaneIndex);
+      this.spawnVehicle(config, time, context.playerLaneIndex, undefined, context.trafficSpeedMultiplier ?? 1);
       this.nextSpawnAt = time + config.spawnEveryMs;
     }
+
+    this.applyTrafficSpeedMultiplier(context.trafficSpeedMultiplier ?? 1);
 
     this.group.children.each((child) => {
       const sprite = child as Phaser.Physics.Arcade.Sprite;
@@ -111,27 +132,40 @@ export class TrafficSystem {
     return sprite.getData("carModel") as CarModel | undefined;
   }
 
+  addSuperJackpotSpawnBonus(bonus: { cars: number; police: number; riderOsky: number; riderGaston: number }) {
+    this.superJackpotSpawnTargets.cars += bonus.cars;
+    this.superJackpotSpawnTargets.police += bonus.police;
+    this.superJackpotSpawnTargets.riderOsky += bonus.riderOsky;
+    this.superJackpotSpawnTargets.riderGaston += bonus.riderGaston;
+  }
+
   private updateSuperJackpotTraffic(time: number, baseConfig: SpawnConfig, context: TrafficDirectorContext) {
     if (!this.superJackpotStarted) {
       this.superJackpotStarted = true;
       this.superJackpotSpawnedCars = 0;
       this.superJackpotSpawnedPolice = 0;
+      this.superJackpotSpawnedRiderOsky = 0;
+      this.superJackpotSpawnedRiderGaston = 0;
+      this.superJackpotSpawnTargets = this.pickSuperJackpotSpawnTargets();
       this.nextSuperJackpotSpawnAt = time;
     }
 
     const config = this.getSuperJackpotConfig(baseConfig);
     let attempts = 0;
     while (
-      !context.superJackpotCompleted &&
-      this.superJackpotSpawnedCars < GAME_BALANCE.superJackpot.targetCars &&
+      !this.reachedSuperJackpotSpawnTargets() &&
       time >= this.nextSuperJackpotSpawnAt &&
       attempts < 3
     ) {
-      const spawned = this.spawnVehicle(config, time, context.playerLaneIndex);
+      const kind = this.pickSuperJackpotVehicleKind();
+      const spawned = this.spawnVehicle(config, time, context.playerLaneIndex, kind, context.trafficSpeedMultiplier ?? 1);
       if (spawned) {
-        const isPolice = this.getLastSpawnedVehicleKind() === "policeCar";
-        if (isPolice) {
+        if (kind === "policeCar") {
           this.superJackpotSpawnedPolice += 1;
+        } else if (kind === "riderOsky") {
+          this.superJackpotSpawnedRiderOsky += 1;
+        } else if (kind === "riderGaston") {
+          this.superJackpotSpawnedRiderGaston += 1;
         } else {
           this.superJackpotSpawnedCars += 1;
         }
@@ -143,6 +177,30 @@ export class TrafficSystem {
     }
   }
 
+  private pickSuperJackpotSpawnTargets(): SuperJackpotSpawnTargets {
+    const cars = Phaser.Math.Between(GAME_BALANCE.superJackpot.spawnCarRange.min, GAME_BALANCE.superJackpot.spawnCarRange.max);
+    const police = Phaser.Math.Between(GAME_BALANCE.superJackpot.spawnPoliceRange.min, GAME_BALANCE.superJackpot.spawnPoliceRange.max);
+    const riders = Phaser.Math.Between(GAME_BALANCE.superJackpot.spawnRiderRange.min, GAME_BALANCE.superJackpot.spawnRiderRange.max);
+    const baseRidersPerType = Math.floor(riders / 2);
+    const oddRiderGoesToOsky = riders % 2 === 1 && Phaser.Math.Between(0, 1) === 0;
+
+    return {
+      cars,
+      police,
+      riderOsky: baseRidersPerType + (oddRiderGoesToOsky ? 1 : 0),
+      riderGaston: baseRidersPerType + (riders % 2 === 1 && !oddRiderGoesToOsky ? 1 : 0),
+    };
+  }
+
+  private reachedSuperJackpotSpawnTargets() {
+    return (
+      this.superJackpotSpawnedCars >= this.superJackpotSpawnTargets.cars &&
+      this.superJackpotSpawnedPolice >= this.superJackpotSpawnTargets.police &&
+      this.superJackpotSpawnedRiderOsky >= this.superJackpotSpawnTargets.riderOsky &&
+      this.superJackpotSpawnedRiderGaston >= this.superJackpotSpawnTargets.riderGaston
+    );
+  }
+
   private getSuperJackpotConfig(baseConfig: SpawnConfig): SpawnConfig {
     return {
       ...baseConfig,
@@ -151,13 +209,42 @@ export class TrafficSystem {
     };
   }
 
-  private spawnVehicle(config: SpawnConfig, time: number, playerLaneIndex?: number) {
+  private pickSuperJackpotVehicleKind(): VehicleKind {
+    const quotas: Array<{ kind: VehicleKind; remaining: number; target: number }> = [
+      {
+        kind: "normalCar",
+        remaining: this.superJackpotSpawnTargets.cars - this.superJackpotSpawnedCars,
+        target: this.superJackpotSpawnTargets.cars,
+      },
+      {
+        kind: "policeCar",
+        remaining: this.superJackpotSpawnTargets.police - this.superJackpotSpawnedPolice,
+        target: this.superJackpotSpawnTargets.police,
+      },
+      {
+        kind: "riderOsky",
+        remaining: this.superJackpotSpawnTargets.riderOsky - this.superJackpotSpawnedRiderOsky,
+        target: this.superJackpotSpawnTargets.riderOsky,
+      },
+      {
+        kind: "riderGaston",
+        remaining: this.superJackpotSpawnTargets.riderGaston - this.superJackpotSpawnedRiderGaston,
+        target: this.superJackpotSpawnTargets.riderGaston,
+      },
+    ];
+
+    return quotas
+      .filter((quota) => quota.remaining > 0)
+      .sort((left, right) => right.remaining / right.target - left.remaining / left.target)[0]?.kind ?? "normalCar";
+  }
+
+  private spawnVehicle(config: SpawnConfig, time: number, playerLaneIndex?: number, forcedKind?: VehicleKind, trafficSpeedMultiplier = 1) {
     const y = -90;
 
     for (let attempt = 0; attempt < GAME_BALANCE.traffic.spawnRetryCount; attempt += 1) {
-      const kind = this.pickVehicleKind(config.policeChance);
-      const carModel = kind === "policeCar" ? undefined : this.pickCarModel(config.modelWeights);
-      const desiredSpeed = this.getModelSpeed(config, carModel);
+      const kind = forcedKind ?? this.pickVehicleKind(config.policeChance);
+      const carModel = kind === "normalCar" ? this.pickCarModel(config.modelWeights) : undefined;
+      const desiredSpeed = this.getVehicleSpeed(config, kind, carModel, trafficSpeedMultiplier);
       const laneIndex = this.pickSmartLane(y, desiredSpeed, time, playerLaneIndex);
 
       if (laneIndex === null) {
@@ -165,6 +252,7 @@ export class TrafficSystem {
       }
 
       this.createVehicle(kind, carModel, laneIndex, y, this.getSafeSpeedForLane(laneIndex, desiredSpeed, y), time);
+      this.applyTrafficSpeedMultiplier(trafficSpeedMultiplier);
       this.lastSpawnedVehicleKind = kind;
       return true;
     }
@@ -180,12 +268,13 @@ export class TrafficSystem {
 
   private createVehicle(kind: VehicleKind, carModel: CarModel | undefined, laneIndex: number, y: number, speed: number, time: number) {
     const x = GAME_BALANCE.traffic.lanes[laneIndex];
-    const texture = kind === "policeCar" ? ASSET_KEYS.policeCar : CAR_MODEL_TEXTURES[carModel ?? "peugeot"];
+    const texture = kind === "normalCar" ? CAR_MODEL_TEXTURES[carModel ?? "peugeot"] : VEHICLE_TEXTURES[kind];
     const sprite = this.group.create(x, y, texture) as Phaser.Physics.Arcade.Sprite;
 
     sprite.setData("vehicleKind", kind);
     sprite.setData("carModel", carModel);
     sprite.setData("vehicleTexture", texture);
+    sprite.setData("baseSpeed", speed);
     this.scaleVehicle(sprite, kind);
     sprite.setVelocityY(speed);
     sprite.setDepth(kind === "policeCar" ? 8 : 6);
@@ -384,11 +473,11 @@ export class TrafficSystem {
     }
 
     const gap = closestVehicle.y - y;
-    if (desiredSpeed <= closestVehicle.speed || gap >= GAME_BALANCE.traffic.sameLaneMinGapPx + GAME_BALANCE.traffic.sameLaneCatchupExtraGapPx) {
+    if (desiredSpeed <= closestVehicle.speed) {
       return desiredSpeed;
     }
 
-    return Math.min(desiredSpeed, Math.max(0, closestVehicle.speed));
+    return Math.max(0, closestVehicle.speed);
   }
 
   private getClosestVehicleInLane(lane: number): Phaser.Physics.Arcade.Sprite | null {
@@ -461,14 +550,38 @@ export class TrafficSystem {
     return "peugeot";
   }
 
-  private getModelSpeed(config: SpawnConfig, carModel?: CarModel) {
+  private getVehicleSpeed(config: SpawnConfig, kind: VehicleKind, carModel?: CarModel, trafficSpeedMultiplier = 1) {
     const speed = Phaser.Math.Between(config.minSpeed, config.maxSpeed);
     const focusBoost = carModel === "focus" ? GAME_BALANCE.traffic.focusSpeedMultiplier : 1;
-    return Math.round(speed * GAME_BALANCE.traffic.globalSpeedMultiplier * focusBoost);
+    const riderSlowdown = kind === "riderOsky" || kind === "riderGaston" ? GAME_BALANCE.traffic.riderSpeedMultiplier : 1;
+    return Math.round(speed * GAME_BALANCE.traffic.globalSpeedMultiplier * focusBoost * riderSlowdown * trafficSpeedMultiplier);
+  }
+
+  private applyTrafficSpeedMultiplier(multiplier: number) {
+    this.group.getChildren().forEach((child) => {
+      const sprite = child as Phaser.Physics.Arcade.Sprite;
+      if (!sprite.active) {
+        return;
+      }
+
+      const baseSpeed = sprite.getData("baseSpeed");
+      if (typeof baseSpeed !== "number") {
+        return;
+      }
+
+      sprite.setVelocityY(Math.round(baseSpeed * multiplier));
+    });
   }
 
   private scaleVehicle(sprite: Phaser.Physics.Arcade.Sprite, kind: VehicleKind) {
-    const targetHeight = kind === "van" ? GAME_BALANCE.traffic.vanHeight : GAME_BALANCE.traffic.carHeight;
+    const targetHeight =
+      kind === "van"
+        ? GAME_BALANCE.traffic.vanHeight
+        : kind === "riderOsky"
+          ? GAME_BALANCE.traffic.riderOskyHeight
+          : kind === "riderGaston"
+            ? GAME_BALANCE.traffic.riderGastonHeight
+          : GAME_BALANCE.traffic.carHeight;
     const scale = targetHeight / sprite.height;
     sprite.setScale(scale);
   }

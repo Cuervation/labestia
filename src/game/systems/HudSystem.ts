@@ -9,8 +9,10 @@ export class HudSystem {
   private readonly topOffset = -66;
   private readonly scoreText: HudText;
   private readonly timerText: HudText;
-  private readonly difficultyText: HudText;
   private readonly hintText: HudText;
+  private readonly sirenImage?: Phaser.GameObjects.Image;
+  private readonly rappiImage?: Phaser.GameObjects.Image;
+  private readonly minaImage?: Phaser.GameObjects.Image;
   private readonly superJackpotPanel: Phaser.GameObjects.Graphics;
   private readonly superJackpotLetters: HudText[] = [];
   private readonly superJackpotProgressText: HudText;
@@ -32,7 +34,39 @@ export class HudSystem {
       .text(scoreValueX, 104 + this.topOffset, "0", this.valueStyle())
       .setOrigin(0.5, 0.5)
       .setPadding(10, 4, 10, 4);
-    this.difficultyText = scene.add.text(scene.scale.width - 28, 158 + this.topOffset, "PUNTAJE · NIVEL EASY", this.style("#38bdf8", 24, "Teko, Arial, sans-serif")).setOrigin(1, 0);
+    if (scene.textures.exists(ASSET_KEYS.sirena)) {
+      this.sirenImage = scene.add
+        .image(scene.scale.width - 54, 204 + this.topOffset, ASSET_KEYS.sirena)
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0)
+        .setDepth(101)
+        .setVisible(false);
+      const source = scene.textures.get(ASSET_KEYS.sirena).getSourceImage() as HTMLImageElement;
+      const targetWidth = 108;
+      this.sirenImage.setDisplaySize(targetWidth, (source.height / source.width) * targetWidth);
+    }
+    if (scene.textures.exists(ASSET_KEYS.rappi)) {
+      this.rappiImage = scene.add
+        .image(scene.scale.width - 148.6, 204 + this.topOffset, ASSET_KEYS.rappi)
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0)
+        .setDepth(101)
+        .setVisible(false);
+      const source = scene.textures.get(ASSET_KEYS.rappi).getSourceImage() as HTMLImageElement;
+      const targetWidth = 81.2;
+      this.rappiImage.setDisplaySize(targetWidth, (source.height / source.width) * targetWidth);
+    }
+    if (scene.textures.exists(ASSET_KEYS.mina)) {
+      this.minaImage = scene.add
+        .image(scene.scale.width - 228.4, 204 + this.topOffset, ASSET_KEYS.mina)
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0)
+        .setDepth(101)
+        .setVisible(false);
+      const source = scene.textures.get(ASSET_KEYS.mina).getSourceImage() as HTMLImageElement;
+      const targetWidth = 78.4;
+      this.minaImage.setDisplaySize(targetWidth, (source.height / source.width) * targetWidth);
+    }
     this.hintText = scene.add
       .text(scene.scale.width / 2, 330 + this.topOffset, "AGUANTÁ HASTA EL SUPERJACKPOT", {
         ...this.style("#fff7ed", 22, "Luckiest Guy, Impact, sans-serif"),
@@ -67,7 +101,6 @@ export class HudSystem {
     [
       this.scoreText,
       this.timerText,
-      this.difficultyText,
       this.hintText,
       ...this.superJackpotLetters,
       this.superJackpotProgressText,
@@ -88,9 +121,20 @@ export class HudSystem {
   update(scoring: ScoringSystem, jackpots: SuperJackpotSnapshot[] = []) {
     this.scoreText.setText(`${scoring.score.toLocaleString("es-AR")}`);
     this.timerText.setText(this.formatTime(scoring.remainingSeconds));
-    this.difficultyText.setText(`PUNTAJE · NIVEL ${scoring.getDifficulty().toUpperCase()}`);
     this.timerText.setColor(scoring.remainingSeconds <= 10 ? "#ef4444" : "#fff7ed");
     this.updateSuperJackpot(jackpots[0]);
+  }
+
+  setPoliceAlert(active: boolean) {
+    this.sirenImage?.setVisible(active);
+  }
+
+  setRiderBoost(active: boolean) {
+    this.rappiImage?.setVisible(active);
+  }
+
+  setWhistleCue(active: boolean) {
+    this.minaImage?.setVisible(active);
   }
 
   private valueStyle(): Phaser.Types.GameObjects.Text.TextStyle {

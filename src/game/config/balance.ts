@@ -21,18 +21,21 @@ export const GAME_BALANCE = {
     floatingTextDurationMs: 1050,
   },
   score: {
-    peugeot: 80,
-    chery: 100,
-    meriva: 180,
-    focus: 140,
-    eco: 120,
+    peugeot: 800,
+    chery: 1000,
+    meriva: 1800,
+    focus: 1400,
+    eco: 1200,
   } satisfies Record<CarModel, number>,
   superJackpot: {
     startsAtRemainingSeconds: 90,
-    targetCars: 58,
+    targetCars: 50,
+    spawnCarRange: { min: 55, max: 60 },
+    spawnPoliceRange: { min: 35, max: 45 },
+    spawnRiderRange: { min: 25, max: 30 },
     scoreMultiplier: 2,
-    spawnEveryMs: 1100,
-    policeChance: 0.72,
+    spawnEveryMs: 600,
+    policeChance: 0.33,
   },
   player: {
     baseSpeed: 395,
@@ -49,6 +52,9 @@ export const GAME_BALANCE = {
     vanWidth: 88,
     carHeight: 138,
     vanHeight: 154,
+    riderOskyHeight: 106,
+    riderGastonHeight: 128,
+    riderSpeedMultiplier: 0.55,
     firstSpawnDelayMs: 650,
     colliderWidthRatio: 0.72,
     colliderHeightRatio: 0.9,
@@ -73,12 +79,12 @@ export const GAME_BALANCE = {
     adjacentLaneThreatWeight: 50,
     farLaneThreatWeight: 25,
     laneVarietyDebtWeight: 40,
-    focusSpeedMultiplier: 1.28,
+    focusSpeedMultiplier: 0.96,
     lanes: [258, 360, 462],
     easy: {
       spawnEveryMs: 920,
-      minSpeed: 160,
-      maxSpeed: 225,
+      minSpeed: 240,
+      maxSpeed: 338,
       policeChance: 0.075,
       modelWeights: {
         peugeot: 34,
@@ -90,8 +96,8 @@ export const GAME_BALANCE = {
     },
     medium: {
       spawnEveryMs: 640,
-      minSpeed: 225,
-      maxSpeed: 330,
+      minSpeed: 338,
+      maxSpeed: 495,
       policeChance: 0.25,
       modelWeights: {
         peugeot: 28,
@@ -103,8 +109,8 @@ export const GAME_BALANCE = {
     },
     chaos: {
       spawnEveryMs: 430,
-      minSpeed: 315,
-      maxSpeed: 455,
+      minSpeed: 473,
+      maxSpeed: 683,
       policeChance: 0.45,
       modelWeights: {
         peugeot: 22,
@@ -116,8 +122,8 @@ export const GAME_BALANCE = {
     },
     superChaos: {
       spawnEveryMs: 280,
-      minSpeed: 400,
-      maxSpeed: 500,
+      minSpeed: 600,
+      maxSpeed: 750,
       policeChance: 0.45,
       modelWeights: {
         peugeot: 18,

@@ -13,6 +13,11 @@ function loadAsset(scene: Phaser.Scene, asset: GameAsset) {
     return;
   }
 
+  if (asset.path.endsWith(".ogg") || asset.path.endsWith(".mp3") || asset.path.endsWith(".wav")) {
+    scene.load.audio(asset.key, asset.path);
+    return;
+  }
+
   scene.load.image(asset.key, asset.path);
 }
 

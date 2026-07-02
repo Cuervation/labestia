@@ -191,3 +191,7 @@
 - Correction: SuperJackpot progress now counts only non-police car captures. Police still spawn and score, but they do not advance the 55-60 target.
 
 - Spawn bugfix: the SuperJackpot traffic generator was counting police spawns against the quota, which starved the real car count. Switched the traffic-side counter to track cars and police separately, and shortened the spawn interval so 58 cars can actually appear within 90 seconds.
+
+- Tutorial popup in progress: PlayPage now gates GameCanvas behind an OK tutorial modal with existing car/police/rider/mujer assets and arcade styling in global.css. Pending validation: typecheck and browser smoke. No build per current AGENTS instruction.
+
+- Tutorial popup validation passed: npm run typecheck passed; browser smoke verified tutorial text/images/OK button, OK mounts one game canvas, no console errors; screenshots saved as tutorial-smoke-before.png and tutorial-smoke-after.png plus output/tutorial-smoke. No build run per current AGENTS instruction.

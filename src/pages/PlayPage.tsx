@@ -22,6 +22,7 @@ function dispatchPlayerControl(direction: -1 | 0 | 1) {
 export function PlayPage() {
   const user = useAuthStore((state) => state.user);
   const [gameKey, setGameKey] = useState(0);
+  const [tutorialOpen, setTutorialOpen] = useState(true);
   const [rankingOpen, setRankingOpen] = useState(false);
   const [gameOverResult, setGameOverResult] = useState<{
     score: number;
@@ -134,33 +135,70 @@ export function PlayPage() {
   return (
     <section className="play-layout play-screen">
       <div className="play-main">
-        <GameCanvas key={gameKey} />
-        <div className="mobile-controls" aria-label="Controles tactiles">
-          <button
-            className="touch-control"
-            type="button"
-            aria-label="Mover izquierda"
-            onContextMenu={(event) => event.preventDefault()}
-            onPointerCancel={() => dispatchPlayerControl(0)}
-            onPointerDown={() => dispatchPlayerControl(-1)}
-            onPointerLeave={() => dispatchPlayerControl(0)}
-            onPointerUp={() => dispatchPlayerControl(0)}
-          >
-            ←
-          </button>
-          <button
-            className="touch-control"
-            type="button"
-            aria-label="Mover derecha"
-            onContextMenu={(event) => event.preventDefault()}
-            onPointerCancel={() => dispatchPlayerControl(0)}
-            onPointerDown={() => dispatchPlayerControl(1)}
-            onPointerLeave={() => dispatchPlayerControl(0)}
-            onPointerUp={() => dispatchPlayerControl(0)}
-          >
-            →
-          </button>
-        </div>
+        {tutorialOpen ? (
+          <div className="tutorial-popup-backdrop" role="dialog" aria-modal="true" aria-label="Tutorial">
+            <div className="tutorial-popup">
+              <div className="tutorial-popup-header">
+                <span className="mode-badge">Tutorial</span>
+                <h1>Antes de salir</h1>
+              </div>
+              <div className="tutorial-rules">
+                <article className="tutorial-rule tutorial-rule--wide">
+                  <img src="/assets/peugeot.png" alt="" />
+                  <p>Chocá todos los autos posibles para llegar al Superjackpot!</p>
+                </article>
+                <article className="tutorial-rule">
+                  <img src="/assets/police-car.png" alt="" />
+                  <p>Tené cuidado con chocar a la policía: te van a seguir de cerca y no vas a poder doblar.</p>
+                </article>
+                <article className="tutorial-rule">
+                  <span className="tutorial-riders" aria-hidden="true">
+                    <img src="/assets/rider_osky.png" alt="" />
+                    <img src="/assets/rider_gaston.png" alt="" />
+                  </span>
+                  <p>Si levantás a Osky o al Negrito, acelerá que tenés que entregar el pedido con ellos.</p>
+                </article>
+                <article className="tutorial-rule tutorial-rule--wide">
+                  <img src="/assets/mujer.png" alt="" />
+                  <p>Guardá con que aparezca una chica voluptuosa: el conductor se distrae.</p>
+                </article>
+              </div>
+              <button className="tutorial-ok-button" type="button" onClick={() => setTutorialOpen(false)}>
+                OK
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <GameCanvas key={gameKey} />
+            <div className="mobile-controls" aria-label="Controles tactiles">
+              <button
+                className="touch-control"
+                type="button"
+                aria-label="Mover izquierda"
+                onContextMenu={(event) => event.preventDefault()}
+                onPointerCancel={() => dispatchPlayerControl(0)}
+                onPointerDown={() => dispatchPlayerControl(-1)}
+                onPointerLeave={() => dispatchPlayerControl(0)}
+                onPointerUp={() => dispatchPlayerControl(0)}
+              >
+                ←
+              </button>
+              <button
+                className="touch-control"
+                type="button"
+                aria-label="Mover derecha"
+                onContextMenu={(event) => event.preventDefault()}
+                onPointerCancel={() => dispatchPlayerControl(0)}
+                onPointerDown={() => dispatchPlayerControl(1)}
+                onPointerLeave={() => dispatchPlayerControl(0)}
+                onPointerUp={() => dispatchPlayerControl(0)}
+              >
+                →
+              </button>
+            </div>
+          </>
+        )}
         {gameOverResult ? (
           <div className="game-over-overlay">
             <GameOverPanel

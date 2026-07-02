@@ -16,7 +16,11 @@ export const ASSET_KEYS = {
   explosion: "explosion",
   riderOsky: "rider-osky",
   riderGaston: "rider-gaston",
+  sirena: "sirena",
+  rappi: "rappi",
+  mina: "mina",
   woman: "woman",
+  whistle: "whistle",
   hudTopFrame: "hud-top-frame",
 } as const;
 
@@ -51,7 +55,13 @@ export const BOOT_ASSETS = [
   { key: ASSET_KEYS.meriva, path: "/assets/meriva.png" },
   { key: ASSET_KEYS.peugeot, path: "/assets/peugeot.png" },
   { key: ASSET_KEYS.policeCar, path: "/assets/police-car.png" },
+  { key: ASSET_KEYS.riderOsky, path: "/assets/rider_osky.png" },
+  { key: ASSET_KEYS.riderGaston, path: "/assets/rider_gaston.png" },
+  { key: ASSET_KEYS.sirena, path: "/assets/hud/sirena.png" },
+  { key: ASSET_KEYS.rappi, path: "/assets/hud/rappi.png" },
+  { key: ASSET_KEYS.mina, path: "/assets/hud/mina.png" },
   { key: ASSET_KEYS.woman, path: "/assets/mujer.png" },
+  { key: ASSET_KEYS.whistle, path: "/assets/audio/wolf-whistle.ogg" },
   { key: ASSET_KEYS.hudTopFrame, path: "/assets/hud/top-hud-frame.png" },
   STREET_ASSETS[0],
   STREET_ASSETS[1],
@@ -65,8 +75,6 @@ export const OPTIONAL_ASSETS = [
   { key: ASSET_KEYS.taxi, path: "/assets/placeholders/taxi.svg" },
   { key: ASSET_KEYS.van, path: "/assets/placeholders/van.svg" },
   { key: ASSET_KEYS.explosion, path: "/assets/placeholders/explosion.svg" },
-  { key: ASSET_KEYS.riderOsky, path: "/assets/rider_osky.png" },
-  { key: ASSET_KEYS.riderGaston, path: "/assets/rider_gaston.png" },
 ] as const satisfies readonly GameAsset[];
 
 export const ASSET_MANIFEST = [...BOOT_ASSETS, ...BACKGROUND_STREET_ASSETS, ...OPTIONAL_ASSETS] as const;

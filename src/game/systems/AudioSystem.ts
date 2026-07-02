@@ -1,16 +1,21 @@
+import Phaser from "phaser";
+import { ASSET_KEYS } from "../config/assets";
 import type { VehicleKind } from "../types";
 
-type AudioKind = "hit" | "police" | "gameOver";
+type AudioKind = "hit" | "police" | "gameOver" | "whistle";
 
 const FREQUENCIES: Record<AudioKind, number[]> = {
   hit: [120, 78],
   police: [260, 390, 520],
   gameOver: [180, 120, 80],
+  whistle: [920, 1180, 980],
 };
 
 export class AudioSystem {
   private context?: AudioContext;
   private enabled = true;
+
+  constructor(private readonly scene?: Phaser.Scene) {}
 
   playHit(kind: VehicleKind, _comboMultiplier: number) {
     this.play(kind === "policeCar" ? "police" : "hit");
@@ -18,6 +23,15 @@ export class AudioSystem {
 
   playGameOver() {
     this.play("gameOver", 0.07);
+  }
+
+  playWhistle() {
+    if (this.scene?.cache.audio.exists(ASSET_KEYS.whistle)) {
+      this.scene.sound.play(ASSET_KEYS.whistle, { volume: 0.65 });
+      return;
+    }
+
+    this.play("whistle", 0.03);
   }
 
   private play(kind: AudioKind, volume = 0.045) {
@@ -44,7 +58,7 @@ export class AudioSystem {
         const start = now + index * 0.075;
         const end = start + 0.1;
 
-        oscillator.type = "square";
+        oscillator.type = kind === "whistle" ? "sine" : "square";
         oscillator.frequency.setValueAtTime(frequency, start);
         gain.gain.setValueAtTime(0.0001, start);
         gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);

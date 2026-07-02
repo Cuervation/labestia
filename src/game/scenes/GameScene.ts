@@ -21,6 +21,8 @@ export class GameScene extends Phaser.Scene {
   private streetDecorations: Phaser.GameObjects.Image[] = [];
   private streetRotationIndex = 0;
   private backgroundStreetLoadStarted = false;
+  private riderSpeedBoostUntil = 0;
+  private riderSpeedBoostMultiplier = 1;
   private whistleDialog?: {
     bubble: Phaser.GameObjects.Graphics;
     text: Phaser.GameObjects.Text;
@@ -35,7 +37,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#111111");
     this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
     this.simulatedTime = this.time.now;
-    this.scheduleNextWomanStreetEvent(this.simulatedTime);
+    this.nextWomanEventAt = this.simulatedTime + 5000;
 
     this.drawRoad();
     this.logCreateTiming();
@@ -47,7 +49,7 @@ export class GameScene extends Phaser.Scene {
     this.effects = new EffectsSystem(this);
     this.hud = new HudSystem(this);
     this.missions = new MissionSystem();
-    this.audio = new AudioSystem();
+    this.audio = new AudioSystem(this);
     this.gameState = new GameStateSystem(this);
 
     this.physics.add.overlap(
@@ -114,13 +116,18 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.missions.update(this.scoring.remainingSeconds);
-    this.updateRoad(delta);
+    const riderBoostMultiplier = this.getRiderBoostMultiplier(time);
+    this.updateRoad(time, delta, riderBoostMultiplier);
     this.updateWomanStreetEvent(time);
-    this.player.update(time, 1, this.isWhistleDialogActive(time));
+    const whistleActive = this.isWhistleDialogActive(time);
+    this.player.update(time, 1, whistleActive);
+    this.hud.setPoliceAlert(this.player.isSteeringLocked(time));
+    this.hud.setRiderBoost(riderBoostMultiplier > 1);
+    this.hud.setWhistleCue(whistleActive);
     this.traffic.update(time, this.scoring.getDifficulty(), {
       playerLaneIndex: this.player.getLaneIndex(),
       superJackpotActive: this.missions.isActive(),
-      superJackpotCompleted: this.missions.isCompleted(),
+      trafficSpeedMultiplier: riderBoostMultiplier,
     });
     this.hud.update(this.scoring, this.missions.getSnapshots());
     this.updateWhistleDialog(time);
@@ -137,16 +144,33 @@ export class GameScene extends Phaser.Scene {
     const x = vehicle.x;
     const y = vehicle.y;
     const isPolice = kind === "policeCar";
+    const isRider = this.isRiderKind(kind);
 
     this.traffic.destroyVehicle(vehicle);
-    this.scoring.registerVehicleDestroyed();
-    const basePoints = carModel ? this.scoring.addVehicleBaseScore(carModel) : 0;
-    const jackpotHit = this.missions?.registerHit(this.scoring, kind !== "policeCar");
 
     this.audio?.playHit(kind, 1);
     this.effects.impact(kind, 1);
     this.effects.sparks(x, y, kind, 1);
     this.effects.explosion(x, y, 1);
+
+    if (isRider) {
+      this.traffic.addSuperJackpotSpawnBonus({
+        cars: 3,
+        police: 2,
+        riderOsky: 1,
+        riderGaston: 1,
+      });
+      this.boostRiderSpeed(this.simulatedTime, 1.7, 4000);
+      this.effects.floatingText(x, y - 34, "RIDER +VELOCIDAD", {
+        color: "#f97316",
+        fontSize: 38,
+      });
+      return;
+    }
+
+    this.scoring.registerVehicleDestroyed();
+    const basePoints = carModel ? this.scoring.addVehicleBaseScore(carModel) : 0;
+    const jackpotHit = this.missions?.registerHit(this.scoring, kind !== "policeCar");
 
     if (jackpotHit?.status === "progress") {
       const label = basePoints > 0 ? `${this.formatCarModel(carModel)} +${basePoints}` : "POLICIA";
@@ -177,6 +201,24 @@ export class GameScene extends Phaser.Scene {
         fontSize: 34,
       });
     }
+  }
+
+  private isRiderKind(kind: VehicleKind) {
+    return kind === "riderOsky" || kind === "riderGaston";
+  }
+
+  private boostRiderSpeed(time: number, multiplier: number, durationMs: number) {
+    this.riderSpeedBoostMultiplier = multiplier;
+    this.riderSpeedBoostUntil = Math.max(this.riderSpeedBoostUntil, time + durationMs);
+  }
+
+  private getRiderBoostMultiplier(time: number) {
+    if (time >= this.riderSpeedBoostUntil) {
+      this.riderSpeedBoostMultiplier = 1;
+      return 1;
+    }
+
+    return this.riderSpeedBoostMultiplier;
   }
 
   private emitSmoke(delta: number) {
@@ -260,12 +302,12 @@ export class GameScene extends Phaser.Scene {
     this.streetRotationIndex = index;
   }
 
-  private updateRoad(delta: number) {
+  private updateRoad(time: number, delta: number, riderBoostMultiplier = 1) {
     if (this.roadTiles.length === 0) {
       return;
     }
 
-    const speed = (GAME_BALANCE.player.baseSpeed * 2) * (delta / 1000);
+    const speed = (GAME_BALANCE.player.baseSpeed * 2 * riderBoostMultiplier) * (delta / 1000);
     const loadedStreets = this.getLoadedStreetAssets();
     const topY = () => Math.min(...this.roadTiles.map((tile) => tile.y));
 
@@ -376,6 +418,7 @@ export class GameScene extends Phaser.Scene {
       .setScale(GAME_BALANCE.streetEvents.womanScale)
       .setDepth(5);
     this.streetDecorations.push(woman);
+    this.audio?.playWhistle();
     this.showWhistleDialog();
   }
 
