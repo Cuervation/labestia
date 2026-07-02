@@ -23,6 +23,7 @@ export const GAME_BALANCE = {
   score: {
     peugeot: 800,
     chery: 1000,
+    renault: 1100,
     meriva: 1800,
     focus: 1400,
     eco: 1200,
@@ -32,7 +33,7 @@ export const GAME_BALANCE = {
     targetCars: 50,
     spawnCarRange: { min: 55, max: 60 },
     spawnPoliceRange: { min: 35, max: 45 },
-    spawnRiderRange: { min: 25, max: 30 },
+    spawnRiderRange: { min: 15, max: 20 },
     scoreMultiplier: 2,
     spawnEveryMs: 600,
     policeChance: 0.33,
@@ -92,6 +93,7 @@ export const GAME_BALANCE = {
       modelWeights: {
         peugeot: 34,
         chery: 28,
+        renault: 12,
         meriva: 12,
         focus: 16,
         eco: 10,
@@ -105,6 +107,7 @@ export const GAME_BALANCE = {
       modelWeights: {
         peugeot: 28,
         chery: 26,
+        renault: 14,
         meriva: 16,
         focus: 18,
         eco: 12,
@@ -118,6 +121,7 @@ export const GAME_BALANCE = {
       modelWeights: {
         peugeot: 22,
         chery: 24,
+        renault: 16,
         meriva: 18,
         focus: 22,
         eco: 14,
@@ -131,6 +135,7 @@ export const GAME_BALANCE = {
       modelWeights: {
         peugeot: 18,
         chery: 22,
+        renault: 18,
         meriva: 20,
         focus: 24,
         eco: 16,

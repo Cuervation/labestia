@@ -1,7 +1,7 @@
 export type GameSessionState = "countdown" | "running" | "finished";
 
 export type VehicleKind = "normalCar" | "taxi" | "van" | "policeCar" | "riderOsky" | "riderGaston";
-export type CarModel = "peugeot" | "chery" | "meriva" | "focus" | "eco";
+export type CarModel = "peugeot" | "chery" | "renault" | "meriva" | "focus" | "eco";
 
 export type SuperJackpotSnapshot = {
   id: string;

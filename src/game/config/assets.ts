@@ -54,6 +54,7 @@ export const BOOT_ASSETS = [
   { key: ASSET_KEYS.focus, path: "/assets/Focus.png" },
   { key: ASSET_KEYS.meriva, path: "/assets/meriva.png" },
   { key: ASSET_KEYS.peugeot, path: "/assets/peugeot.png" },
+  { key: ASSET_KEYS.renault, path: "/assets/renault.png" },
   { key: ASSET_KEYS.policeCar, path: "/assets/police-car.png" },
   { key: ASSET_KEYS.riderOsky, path: "/assets/rider_osky.png" },
   { key: ASSET_KEYS.riderGaston, path: "/assets/rider_gaston.png" },
@@ -70,7 +71,6 @@ export const BOOT_ASSETS = [
 export const BACKGROUND_STREET_ASSETS = STREET_ASSETS.slice(2);
 
 export const OPTIONAL_ASSETS = [
-  { key: ASSET_KEYS.renault, path: "/assets/renault.png" },
   { key: ASSET_KEYS.normalCar, path: "/assets/placeholders/normal-car.svg" },
   { key: ASSET_KEYS.taxi, path: "/assets/placeholders/taxi.svg" },
   { key: ASSET_KEYS.van, path: "/assets/placeholders/van.svg" },

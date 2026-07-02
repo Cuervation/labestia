@@ -46,6 +46,7 @@ const VEHICLE_TEXTURES: Record<VehicleKind, string> = {
 const CAR_MODEL_TEXTURES: Record<CarModel, string> = {
   peugeot: ASSET_KEYS.peugeot,
   chery: ASSET_KEYS.chery,
+  renault: ASSET_KEYS.renault,
   meriva: ASSET_KEYS.meriva,
   focus: ASSET_KEYS.focus,
   eco: ASSET_KEYS.eco,
