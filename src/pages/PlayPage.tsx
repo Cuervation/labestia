@@ -160,7 +160,7 @@ export function PlayPage() {
                 </article>
                 <article className="tutorial-rule tutorial-rule--wide">
                   <img src="/assets/mujer.png" alt="" />
-                  <p>Guardá con que aparezca una chica voluptuosa: el conductor se distrae.</p>
+                  <p>Guardá con que aparezca una chica voluptuosa: el conductor se distrae (dobla para el otro lado donde querés ir).</p>
                 </article>
               </div>
               <button className="tutorial-ok-button" type="button" onClick={() => setTutorialOpen(false)}>
