@@ -275,7 +275,7 @@ export class TrafficSystem {
     sprite.setData("carModel", carModel);
     sprite.setData("vehicleTexture", texture);
     sprite.setData("baseSpeed", speed);
-    this.scaleVehicle(sprite, kind);
+    this.scaleVehicle(sprite, kind, carModel);
     sprite.setVelocityY(speed);
     sprite.setDepth(kind === "policeCar" ? 8 : 6);
     this.registerLaneSpawn(laneIndex, time);
@@ -573,7 +573,7 @@ export class TrafficSystem {
     });
   }
 
-  private scaleVehicle(sprite: Phaser.Physics.Arcade.Sprite, kind: VehicleKind) {
+  private scaleVehicle(sprite: Phaser.Physics.Arcade.Sprite, kind: VehicleKind, carModel?: CarModel) {
     const targetHeight =
       kind === "van"
         ? GAME_BALANCE.traffic.vanHeight
@@ -582,7 +582,8 @@ export class TrafficSystem {
           : kind === "riderGaston"
             ? GAME_BALANCE.traffic.riderGastonHeight
           : GAME_BALANCE.traffic.carHeight;
-    const scale = targetHeight / sprite.height;
+    const modelScale = carModel ? (GAME_BALANCE.traffic.modelScale[carModel] ?? 1) : 1;
+    const scale = (targetHeight * modelScale) / sprite.height;
     sprite.setScale(scale);
   }
 

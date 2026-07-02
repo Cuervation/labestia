@@ -75,6 +75,9 @@ export const GAME_BALANCE = {
     minSpawnYGapPx: 220,
     spawnSkipIfNoSafeLane: true,
     globalSpeedMultiplier: 2,
+    modelScale: {
+      chery: 0.8,
+    } as Partial<Record<CarModel, number>>,
     playerLaneThreatWeight: 80,
     adjacentLaneThreatWeight: 50,
     farLaneThreatWeight: 25,
@@ -140,6 +143,7 @@ export const GAME_BALANCE = {
     womanMaxY: 760,
     womanLeftX: 175,
     womanRightX: 545,
+    womanFirstDelayMs: 10000,
     womanMinIntervalMs: 10000,
     womanMaxIntervalMs: 15000,
     dialogMs: 1650,

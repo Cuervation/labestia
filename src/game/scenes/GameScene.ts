@@ -37,7 +37,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#111111");
     this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
     this.simulatedTime = this.time.now;
-    this.nextWomanEventAt = this.simulatedTime + 5000;
+    this.nextWomanEventAt = this.simulatedTime + GAME_BALANCE.streetEvents.womanFirstDelayMs;
 
     this.drawRoad();
     this.logCreateTiming();
